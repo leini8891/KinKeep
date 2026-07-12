@@ -85,6 +85,11 @@ const copy = {
     knee: "膝盖有点痛",
     poorSleep: "昨晚没睡好",
     noAppetite: "今天没胃口",
+    breakfastNotYet: "早餐还没吃",
+    stomach: "肚子有点痛",
+    stomachMine: "肚子有点痛。",
+    stomachAsk: "肚子是今天开始不舒服，还是最近几天反复出现？",
+    suggestionBasis: "根据同步数据和近期健康记录推荐",
     fine: "我很好。",
     fineNext: "那就好。早餐吃了吗？",
     ate: "已经吃了",
@@ -177,6 +182,11 @@ const copy = {
     knee: "My knee hurts",
     poorSleep: "I slept poorly",
     noAppetite: "I have no appetite",
+    breakfastNotYet: "I haven’t had breakfast",
+    stomach: "My stomach hurts",
+    stomachMine: "My stomach hurts a little.",
+    stomachAsk: "Did the stomach discomfort start today, or has it happened repeatedly over the past few days?",
+    suggestionBasis: "Suggested from synced data and recent health history",
     fine: "I feel well.",
     fineNext: "Glad to hear it. Have you had breakfast?",
     ate: "Yes, I ate",
@@ -246,6 +256,12 @@ const copy = {
     you: "You",
   },
 } as const;
+
+const careProfile = {
+  recurringConcerns: ["knee"] as Array<"knee" | "stomach">,
+  sleepBelowBaseline: true,
+  breakfastUnconfirmed: true,
+};
 
 let nextMessageId = 10;
 
@@ -367,6 +383,12 @@ export function ParentHealthChat() {
       setStep("knee-duration");
       return;
     }
+    if (action === "stomach") {
+      addMessage({ role: "user", text: t.stomachMine });
+      addMessage({ role: "assistant", text: t.stomachAsk });
+      setStep("done");
+      return;
+    }
     if (action === "today-pain" || action === "days-pain") {
       addMessage({ role: "user", text: action === "today-pain" ? t.todayPain : t.daysPain });
       addMessage({ role: "assistant", text: t.painFollow });
@@ -395,7 +417,7 @@ export function ParentHealthChat() {
       return;
     }
     if (action === "appetite" || action === "not-yet") {
-      addMessage({ role: "user", text: action === "appetite" ? t.appetiteMine : t.notYet });
+      addMessage({ role: "user", text: action === "appetite" ? t.appetiteMine : t.breakfastNotYet });
       addMessage({ role: "assistant", text: t.appetiteAsk });
       setStep("meal-photo");
       return;
@@ -448,9 +470,13 @@ export function ParentHealthChat() {
     switch (step) {
       case "initial":
         return [
-          { id: "knee", label: t.knee },
-          { id: "sleep", label: t.poorSleep },
-          { id: "appetite", label: t.noAppetite },
+          ...careProfile.recurringConcerns.map((concern) =>
+            concern === "knee"
+              ? { id: "knee", label: t.knee }
+              : { id: "stomach", label: t.stomach },
+          ),
+          ...(careProfile.sleepBelowBaseline ? [{ id: "sleep", label: t.poorSleep }] : []),
+          ...(careProfile.breakfastUnconfirmed ? [{ id: "not-yet", label: t.breakfastNotYet }] : []),
         ];
       case "breakfast":
         return [
@@ -808,14 +834,17 @@ export function ParentHealthChat() {
       </section>
 
       {isWatchSynced && quickActions.length > 0 && (
-        <div className="quick-actions" aria-label="Suggested replies">
-          {quickActions.map((action) => (
-            <button key={action.id} className={action.important ? "important" : ""} onClick={() => handleAction(action.id)}>{action.label}</button>
-          ))}
+        <div className="quick-action-area">
+          {step === "initial" && <small className="quick-action-basis"><Sparkles size={14} />{t.suggestionBasis}</small>}
+          <div className="quick-actions" aria-label="Suggested replies">
+            {quickActions.map((action) => (
+              <button key={action.id} className={action.important ? "important" : ""} onClick={() => handleAction(action.id)}>{action.label}</button>
+            ))}
+          </div>
         </div>
       )}
 
-      {isWatchSynced && <footer className="chat-controls">
+      <footer className="chat-controls">
         <div className="safety-actions">
           <button className="well-button" onClick={() => handleAction("well")}><Smile size={20} />{t.well}</button>
           <button className="help-button" onClick={() => handleAction("help")}><Siren size={20} />{t.help}</button>
@@ -838,7 +867,7 @@ export function ParentHealthChat() {
         </div>
         <div className={`voice-state ${isListening || isTranscribing ? "active" : ""}`} role="status">{voiceState || t.voiceHint}</div>
         <div className="privacy-note"><CheckCircle2 size={15} />{t.privacy}</div>
-      </footer>}
+      </footer>
     </section>
   );
 }

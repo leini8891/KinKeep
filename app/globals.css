@@ -181,6 +181,8 @@ button { color: inherit; }
 .nutrition-error button { width: fit-content; border: 1px solid #d49686; border-radius: 999px; padding: 7px 11px; background: #fff7f3; color: var(--coral); cursor: pointer; }
 
 .quick-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+.quick-action-area { display: grid; gap: 2px; }
+.quick-action-basis { display: flex; align-items: center; gap: 5px; color: var(--ink-soft); font-size: 12px; }
 .quick-actions button { border: 1px solid #9cb7aa; border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.68); cursor: pointer; transition: transform .18s ease, background .18s ease; }
 .quick-actions button:hover { transform: translateY(-1px); background: var(--sage-pale); }
 .quick-actions button.important { border-color: var(--coral); color: var(--coral); }
