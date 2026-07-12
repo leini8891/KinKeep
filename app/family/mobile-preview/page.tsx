@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "Mobile preview · KinKeep family care",
   description: "A desktop-friendly preview of the KinKeep family mobile experience.",

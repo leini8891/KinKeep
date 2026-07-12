@@ -1,5 +1,7 @@
 import { ParentHealthChat } from "./parent-health-chat";
 
+export const dynamic = "force-static";
+
 export default function Home() {
   return (
     <main className="app-stage">
