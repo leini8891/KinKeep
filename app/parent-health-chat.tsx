@@ -6,6 +6,8 @@ import {
   CircleCheck,
   Footprints,
   HeartPulse,
+  Leaf,
+  LoaderCircle,
   Mic,
   Moon,
   PersonStanding,
@@ -14,8 +16,11 @@ import {
   Smile,
   Sparkles,
   Utensils,
+  UsersRound,
 } from "lucide-react";
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import type { NutritionAnalysis } from "./nutrition";
 
 type Language = "zh" | "en";
 type Step =
@@ -36,7 +41,11 @@ type Message = {
   imageUrl?: string;
   fileName?: string;
   health?: boolean;
+  nutrition?: NutritionAnalysis;
+  loading?: boolean;
+  error?: string;
 };
+type QuickAction = { id: string; label: string; important?: boolean };
 
 type SpeechRecognitionResultEvent = {
   results: { [index: number]: { [index: number]: { transcript: string } } };
@@ -100,7 +109,27 @@ const copy = {
     appetiteMine: "今天没胃口。",
     appetiteAsk: "明白。午餐时愿意拍张照片吗？我可以帮你看看吃得够不够。",
     mealAdded: "已上传餐食照片",
-    mealResult: "午餐里蔬菜不错，但蛋白质稍少。可以加一个鸡蛋或豆腐，吃不完也没关系。",
+    analyzingMeal: "营养助手正在识别菜品、份量和营养…",
+    analysisFailed: "暂时无法完成营养分析",
+    retryPhoto: "重新选择照片",
+    caloriesLabel: "估算热量",
+    protein: "蛋白质",
+    carbs: "碳水",
+    fat: "脂肪",
+    fiber: "膳食纤维",
+    sodium: "钠",
+    vegetables: "蔬菜",
+    confidence: "识别置信度",
+    portion: "估算份量",
+    assumptions: "识别依据",
+    estimateNote: "根据照片估算，实际数值会因份量和烹调方式变化。",
+    photoTypeError: "请选择 JPG、PNG、WEBP 或 GIF 图片。",
+    photoSizeError: "请选择小于 10 MB 的图片。",
+    low: "低",
+    medium: "中",
+    high: "高",
+    moderate: "中等",
+    good: "充足",
     helpMine: "我需要帮助。",
     urgentAsk: "我会陪着你。你现在有紧急危险吗？",
     urgent: "是的，很紧急",
@@ -113,6 +142,7 @@ const copy = {
     input: "想说什么都可以…",
     defaultReply: "谢谢你告诉我。还有哪里不舒服，或者需要我提醒什么吗？",
     privacy: "只有经过你同意的更新才会与 Elena 共享",
+    family: "家属端",
     you: "你",
   },
   en: {
@@ -159,7 +189,27 @@ const copy = {
     appetiteMine: "I do not feel like eating.",
     appetiteAsk: "Understood. Would you take a photo at lunch? I can help check whether the meal is enough.",
     mealAdded: "Meal photo uploaded",
-    mealResult: "Good vegetables, but the meal is a little light on protein. Add an egg or tofu if that feels manageable.",
+    analyzingMeal: "The Nutrition Agent is identifying the dish, portion, and nutrients…",
+    analysisFailed: "Nutrition analysis could not be completed",
+    retryPhoto: "Choose another photo",
+    caloriesLabel: "Estimated calories",
+    protein: "Protein",
+    carbs: "Carbs",
+    fat: "Fat",
+    fiber: "Fiber",
+    sodium: "Sodium",
+    vegetables: "Vegetables",
+    confidence: "Recognition confidence",
+    portion: "Estimated portion",
+    assumptions: "Recognition assumptions",
+    estimateNote: "Estimated from the photo; actual values vary with portion and preparation.",
+    photoTypeError: "Please choose a JPG, PNG, WEBP, or GIF image.",
+    photoSizeError: "Please choose an image smaller than 10 MB.",
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    moderate: "Moderate",
+    good: "Good",
     helpMine: "I need help.",
     urgentAsk: "I’m here with you. Are you in immediate danger?",
     urgent: "Yes, urgent",
@@ -172,6 +222,7 @@ const copy = {
     input: "You can tell me anything…",
     defaultReply: "Thank you for telling me. Is anything else uncomfortable, or is there something you want me to remind you about?",
     privacy: "Only the updates you approve are shared with Elena",
+    family: "Family",
     you: "You",
   },
 } as const;
@@ -320,7 +371,7 @@ export function ParentHealthChat() {
     }
   };
 
-  const quickActions = (() => {
+  const quickActions: QuickAction[] = (() => {
     switch (step) {
       case "initial":
         return [
@@ -395,15 +446,83 @@ export function ParentHealthChat() {
     if (event.key === "Enter") sendDraft();
   };
 
-  const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    const supportedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    if (!supportedTypes.has(file.type)) {
+      setVoiceState(t.photoTypeError);
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setVoiceState(t.photoSizeError);
+      event.target.value = "";
+      return;
+    }
+
+    setVoiceState("");
     const imageUrl = URL.createObjectURL(file);
     objectUrlsRef.current.push(imageUrl);
-    addMessage({ role: "user", imageUrl, fileName: file.name });
+    const imageMessageId = nextMessageId++;
+    const analysisMessageId = nextMessageId++;
+    setMessages((current) => [
+      ...current,
+      { id: imageMessageId, role: "user", imageUrl, fileName: file.name },
+      {
+        id: analysisMessageId,
+        role: "assistant",
+        tone: "status",
+        loading: true,
+      },
+    ]);
     setStep("done");
-    window.setTimeout(() => addMessage({ role: "assistant", tone: "status", text: t.mealResult }), 500);
     event.target.value = "";
+
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("language", language);
+
+    try {
+      const response = await fetch("/api/analyze-meal", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as {
+        analysis?: NutritionAnalysis;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.analysis) {
+        throw new Error(payload.error || t.analysisFailed);
+      }
+
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === analysisMessageId
+            ? {
+                ...message,
+                loading: false,
+                nutrition: payload.analysis,
+              }
+            : message,
+        ),
+      );
+      speak(`${payload.analysis.summary} ${payload.analysis.suggestion}`);
+    } catch (error) {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === analysisMessageId
+            ? {
+                ...message,
+                loading: false,
+                error: error instanceof Error ? error.message : t.analysisFailed,
+              }
+            : message,
+        ),
+      );
+    }
   };
 
   const startVoice = () => {
@@ -453,9 +572,12 @@ export function ParentHealthChat() {
             <span className="presence"><i />{t.presence}</span>
           </div>
         </div>
-        <div className="language-switch" aria-label="Language">
-          <button className={language === "en" ? "selected" : ""} onClick={() => resetConversation("en")} aria-pressed={language === "en"}>EN</button>
-          <button className={language === "zh" ? "selected" : ""} onClick={() => resetConversation("zh")} aria-pressed={language === "zh"}>中文</button>
+        <div className="header-actions">
+          <Link className="family-entry" href="/family" aria-label={t.family}><UsersRound size={17} /><span>{t.family}</span></Link>
+          <div className="language-switch" aria-label="Language">
+            <button className={language === "en" ? "selected" : ""} onClick={() => resetConversation("en")} aria-pressed={language === "en"}>EN</button>
+            <button className={language === "zh" ? "selected" : ""} onClick={() => resetConversation("zh")} aria-pressed={language === "zh"}>中文</button>
+          </div>
         </div>
       </header>
 
@@ -472,7 +594,57 @@ export function ParentHealthChat() {
           <article key={message.id} className={`message ${message.role === "user" ? "mine" : ""} ${message.tone ?? "normal"}`}>
             <small>{message.role === "watch" ? "Apple Watch" : message.role === "user" ? t.you : t.companion}</small>
             <div className="bubble">
-              {message.health ? (
+              {message.loading ? (
+                <div className="nutrition-loading" role="status">
+                  <LoaderCircle size={20} />
+                  <span>{t.analyzingMeal}</span>
+                </div>
+              ) : message.nutrition ? (
+                <div className="nutrition-result">
+                  <div className="nutrition-heading">
+                    <span><Leaf size={19} /><strong>{message.nutrition.dishName}</strong></span>
+                    <span className="confidence-badge">
+                      {t.confidence} · {t[message.nutrition.confidence]}
+                    </span>
+                  </div>
+                  <p className="nutrition-portion"><strong>{t.portion}</strong> · {message.nutrition.portion}</p>
+                  {message.nutrition.isFood ? (
+                    <>
+                      <div className="calorie-range">
+                        <span>{t.caloriesLabel}</span>
+                        <strong>{Math.round(message.nutrition.calories.min)}–{Math.round(message.nutrition.calories.max)} kcal</strong>
+                      </div>
+                      <div className="macro-grid">
+                        <div><strong>{Math.round(message.nutrition.nutrients.proteinG)}g</strong><span>{t.protein}</span></div>
+                        <div><strong>{Math.round(message.nutrition.nutrients.carbsG)}g</strong><span>{t.carbs}</span></div>
+                        <div><strong>{Math.round(message.nutrition.nutrients.fatG)}g</strong><span>{t.fat}</span></div>
+                        <div><strong>{Math.round(message.nutrition.nutrients.fiberG)}g</strong><span>{t.fiber}</span></div>
+                      </div>
+                      <div className="nutrition-signals">
+                        <span>{t.vegetables} · {t[message.nutrition.nutrients.vegetableLevel]}</span>
+                        <span>{t.sodium} · {t[message.nutrition.nutrients.sodiumLevel]}</span>
+                      </div>
+                    </>
+                  ) : null}
+                  <div className="nutrition-advice">
+                    <p>{message.nutrition.summary}</p>
+                    <p><strong>{message.nutrition.suggestion}</strong></p>
+                  </div>
+                  {message.nutrition.assumptions.length > 0 ? (
+                    <details className="nutrition-assumptions">
+                      <summary>{t.assumptions}</summary>
+                      <ul>{message.nutrition.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}</ul>
+                    </details>
+                  ) : null}
+                  <p className="estimate-note">{t.estimateNote}</p>
+                </div>
+              ) : message.error ? (
+                <div className="nutrition-error" role="alert">
+                  <strong>{t.analysisFailed}</strong>
+                  <span>{message.error}</span>
+                  <button onClick={() => fileRef.current?.click()}>{t.retryPhoto}</button>
+                </div>
+              ) : message.health ? (
                 <div className="health-summary">
                   <div className="health-summary-title"><strong>{t.healthTitle}</strong><span>{t.synced}</span></div>
                   <div className="health-metrics">
@@ -517,7 +689,7 @@ export function ParentHealthChat() {
             <button onClick={sendDraft} aria-label="Send"><Send size={19} /></button>
           </div>
           <button className="icon-button" onClick={() => fileRef.current?.click()} aria-label={t.uploadMeal}><Camera size={21} /></button>
-          <input ref={fileRef} hidden type="file" accept="image/*" capture="environment" onChange={handlePhoto} />
+          <input ref={fileRef} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" onChange={handlePhoto} />
         </div>
         <div className="voice-state" role="status">{voiceState}</div>
         <div className="privacy-note"><CheckCircle2 size={15} />{t.privacy}</div>
