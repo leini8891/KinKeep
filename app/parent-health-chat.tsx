@@ -16,7 +16,9 @@ import {
   Smile,
   Sparkles,
   Utensils,
+  UserRound,
   UsersRound,
+  Watch,
 } from "lucide-react";
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -41,6 +43,8 @@ type Message = {
   imageUrl?: string;
   fileName?: string;
   health?: boolean;
+  watchSync?: boolean;
+  syncing?: boolean;
   nutrition?: NutritionAnalysis;
   loading?: boolean;
   error?: string;
@@ -72,6 +76,10 @@ const copy = {
     lunch: "午餐提醒",
     stretch: "室内拉伸",
     today: "今天",
+    watchConnectTitle: "连接 Apple Watch",
+    watchConnectText: "同步昨晚睡眠、今早心率和活动数据",
+    watchSyncButton: "同步健康数据",
+    watchSyncing: "正在同步…",
     healthTitle: "今早健康概览",
     synced: "07:42 已同步",
     sleep: "睡眠 · 少 1h",
@@ -125,6 +133,7 @@ const copy = {
     estimateNote: "根据照片估算，实际数值会因份量和烹调方式变化。",
     photoTypeError: "请选择 JPG、PNG、WEBP 或 GIF 图片。",
     photoSizeError: "请选择小于 10 MB 的图片。",
+    uploadTooLarge: "图片超过上传限制，请选择更小的照片或压缩后重试。",
     low: "低",
     medium: "中",
     high: "高",
@@ -142,6 +151,7 @@ const copy = {
     input: "想说什么都可以…",
     defaultReply: "谢谢你告诉我。还有哪里不舒服，或者需要我提醒什么吗？",
     privacy: "只有经过你同意的更新才会与 Elena 共享",
+    userView: "用户端",
     family: "家属端",
     you: "你",
   },
@@ -152,6 +162,10 @@ const copy = {
     lunch: "Lunch reminder",
     stretch: "Indoor stretch",
     today: "Today",
+    watchConnectTitle: "Connect Apple Watch",
+    watchConnectText: "Sync last night’s sleep, morning heart rate, and activity",
+    watchSyncButton: "Sync health data",
+    watchSyncing: "Syncing…",
     healthTitle: "Morning health overview",
     synced: "Synced 07:42",
     sleep: "Sleep · 1h less",
@@ -205,6 +219,7 @@ const copy = {
     estimateNote: "Estimated from the photo; actual values vary with portion and preparation.",
     photoTypeError: "Please choose a JPG, PNG, WEBP, or GIF image.",
     photoSizeError: "Please choose an image smaller than 10 MB.",
+    uploadTooLarge: "This photo exceeds the upload limit. Choose a smaller photo or compress it and try again.",
     low: "Low",
     medium: "Medium",
     high: "High",
@@ -222,6 +237,7 @@ const copy = {
     input: "You can tell me anything…",
     defaultReply: "Thank you for telling me. Is anything else uncomfortable, or is there something you want me to remind you about?",
     privacy: "Only the updates you approve are shared with Elena",
+    userView: "User",
     family: "Family",
     you: "You",
   },
@@ -232,7 +248,7 @@ let nextMessageId = 10;
 function initialMessages(language: Language): Message[] {
   const t = copy[language];
   return [
-    { id: 1, role: "watch", tone: "status", health: true },
+    { id: 1, role: "watch", tone: "status", watchSync: true },
     { id: 2, role: "assistant", text: t.hello },
   ];
 }
@@ -248,6 +264,7 @@ export function ParentHealthChat() {
   const endRef = useRef<HTMLDivElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const voiceModeRef = useRef(false);
+  const watchSyncTimerRef = useRef<number | null>(null);
   const t = copy[language];
 
   useEffect(() => {
@@ -256,7 +273,10 @@ export function ParentHealthChat() {
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current;
-    return () => objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    return () => {
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      if (watchSyncTimerRef.current !== null) window.clearTimeout(watchSyncTimerRef.current);
+    };
   }, []);
 
   const speak = (text: string) => {
@@ -273,10 +293,32 @@ export function ParentHealthChat() {
   };
 
   const resetConversation = (nextLanguage: Language) => {
+    if (watchSyncTimerRef.current !== null) {
+      window.clearTimeout(watchSyncTimerRef.current);
+      watchSyncTimerRef.current = null;
+    }
     setLanguage(nextLanguage);
     setMessages(initialMessages(nextLanguage));
     setStep("initial");
     setVoiceState("");
+  };
+
+  const syncAppleWatch = () => {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === 1 ? { ...message, syncing: true } : message,
+      ),
+    );
+    watchSyncTimerRef.current = window.setTimeout(() => {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === 1
+            ? { ...message, watchSync: false, syncing: false, health: true }
+            : message,
+        ),
+      );
+      watchSyncTimerRef.current = null;
+    }, 900);
   };
 
   const finishCallChoice = (notify: boolean) => {
@@ -489,6 +531,12 @@ export function ParentHealthChat() {
         method: "POST",
         body: formData,
       });
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.toLowerCase().includes("application/json")) {
+        await response.text();
+        throw new Error(response.status === 413 ? t.uploadTooLarge : t.analysisFailed);
+      }
+
       const payload = (await response.json()) as {
         analysis?: NutritionAnalysis;
         error?: string;
@@ -572,14 +620,16 @@ export function ParentHealthChat() {
             <span className="presence"><i />{t.presence}</span>
           </div>
         </div>
-        <div className="header-actions">
-          <Link className="family-entry" href="/family" aria-label={t.family}><UsersRound size={17} /><span>{t.family}</span></Link>
-          <div className="language-switch" aria-label="Language">
-            <button className={language === "en" ? "selected" : ""} onClick={() => resetConversation("en")} aria-pressed={language === "en"}>EN</button>
-            <button className={language === "zh" ? "selected" : ""} onClick={() => resetConversation("zh")} aria-pressed={language === "zh"}>中文</button>
-          </div>
+        <div className="language-switch" aria-label="Language">
+          <button className={language === "en" ? "selected" : ""} onClick={() => resetConversation("en")} aria-pressed={language === "en"}>EN</button>
+          <button className={language === "zh" ? "selected" : ""} onClick={() => resetConversation("zh")} aria-pressed={language === "zh"}>中文</button>
         </div>
       </header>
+
+      <nav className="audience-switch" aria-label={language === "zh" ? "端视图" : "View"}>
+        <span className="selected" aria-current="page"><UserRound size={16} />{t.userView}</span>
+        <Link href="/family"><UsersRound size={16} />{t.family}</Link>
+      </nav>
 
       <section className="schedule-strip" aria-label="Today’s reminders">
         <div className="schedule-item done"><CircleCheck size={18} /><span><strong>08:00</strong><small>{t.medicine}</small></span></div>
@@ -594,7 +644,19 @@ export function ParentHealthChat() {
           <article key={message.id} className={`message ${message.role === "user" ? "mine" : ""} ${message.tone ?? "normal"}`}>
             <small>{message.role === "watch" ? "Apple Watch" : message.role === "user" ? t.you : t.companion}</small>
             <div className="bubble">
-              {message.loading ? (
+              {message.watchSync ? (
+                <div className="watch-sync-card" role="status" aria-live="polite">
+                  <span className="watch-sync-icon"><Watch size={24} /></span>
+                  <div className="watch-sync-copy">
+                    <strong>{t.watchConnectTitle}</strong>
+                    <span>{t.watchConnectText}</span>
+                  </div>
+                  <button type="button" onClick={syncAppleWatch} disabled={message.syncing}>
+                    {message.syncing ? <LoaderCircle size={17} /> : <Watch size={17} />}
+                    {message.syncing ? t.watchSyncing : t.watchSyncButton}
+                  </button>
+                </div>
+              ) : message.loading ? (
                 <div className="nutrition-loading" role="status">
                   <LoaderCircle size={20} />
                   <span>{t.analyzingMeal}</span>

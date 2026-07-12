@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 async function render(pathname = "/") {
@@ -22,7 +23,12 @@ test("server-renders the KinKeep parent companion", async () => {
   assert.match(html, /<title>KinKeep · Family health companion<\/title>/i);
   assert.match(html, /陈阿姨/);
   assert.match(html, /Apple Watch/);
-  assert.match(html, /今早健康概览/);
+  assert.match(html, /连接 Apple Watch/);
+  assert.match(html, /同步健康数据/);
+  assert.doesNotMatch(html, /今早健康概览/);
+  assert.match(html, /用户端/);
+  assert.match(html, /家属端/);
+  assert.doesNotMatch(html, /妈妈端/);
   assert.match(html, /需要帮助/);
   assert.match(html, /href="\/family"/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
@@ -39,4 +45,16 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(html, /待批准/);
   assert.match(html, /不是单一心率报警/);
   assert.match(html, /高影响行动闸门/);
+  assert.match(html, /返回用户端/);
+  assert.match(html, />EN<\/button>/);
+  assert.match(html, />中文<\/button>/);
+  assert.doesNotMatch(html, /妈妈端/);
+
+  const assetNames = await readdir(new URL("../dist/client/assets/", import.meta.url));
+  const familyBundleName = assetNames.find((name) => name.startsWith("family-care-dashboard-") && name.endsWith(".js"));
+  assert.ok(familyBundleName, "family client bundle should be emitted");
+  const familyBundle = await readFile(new URL(`../dist/client/assets/${familyBundleName}`, import.meta.url), "utf8");
+  assert.match(familyBundle, /Family overview/);
+  assert.match(familyBundle, /Actions awaiting approval/);
+  assert.match(familyBundle, /Back to user view/);
 });
