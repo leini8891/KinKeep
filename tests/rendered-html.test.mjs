@@ -70,3 +70,15 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(familyBundle, /2 health profiles · 2 family caregivers/);
   assert.match(familyBundle, /Family app navigation/);
 });
+
+test("server-renders the desktop-friendly family mobile preview", async () => {
+  const response = await render("/family/mobile-preview");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /家属端手机效果/);
+  assert.match(html, /390 × 844/);
+  assert.match(html, /src="\/family"/);
+  assert.match(html, /打开 PC 版/);
+  assert.match(html, /This preview keeps the live mobile interactions/);
+});
