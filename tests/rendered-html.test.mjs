@@ -49,7 +49,9 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(html, /返回用户端/);
   assert.match(html, /陈家 · 4 位成员/);
   assert.match(html, /弟弟 · 家属协作者/);
-  assert.match(html, /3 个健康档案 · 2 位家属协作者/);
+  assert.match(html, /当前健康档案/);
+  assert.match(html, /2 个健康档案 · 2 位家属协作者/);
+  assert.match(html, /家属端功能/);
   assert.match(html, />EN<\/button>/);
   assert.match(html, />中文<\/button>/);
   assert.doesNotMatch(html, /妈妈端/);
@@ -62,5 +64,8 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(familyBundle, /Actions awaiting approval/);
   assert.match(familyBundle, /Back to user view/);
   assert.match(familyBundle, /Brother · family collaborator/);
-  assert.match(familyBundle, /3 health profiles · 2 family caregivers/);
+  assert.match(familyBundle, /Current health profile/);
+  assert.match(familyBundle, /View all health profiles/);
+  assert.match(familyBundle, /2 health profiles · 2 family caregivers/);
+  assert.match(familyBundle, /Family app navigation/);
 });

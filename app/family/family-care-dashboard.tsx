@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import {
+  Bell,
   CalendarDays,
   ChartNoAxesCombined,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Footprints,
   HeartHandshake,
   HeartPulse,
+  Home,
   LayoutDashboard,
   ListChecks,
   MessageCircle,
@@ -17,7 +20,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Sparkles,
-  UserRound,
   UsersRound,
   Utensils,
 } from "lucide-react";
@@ -33,9 +35,9 @@ import {
 } from "../care-escalation";
 
 type Language = "zh" | "en";
-type MobileView = "safe" | "alerts" | "approvals";
+type MobileView = "safe" | "alerts" | "approvals" | "family";
 type DesktopView = "overview" | "trends" | "care" | "records";
-type MemberId = "mum" | "dad" | "me";
+type MemberId = "mum" | "dad";
 type MetricId = "activity" | "sleep" | "heart" | "routine";
 type Decision = "pending" | "approved" | "declined";
 
@@ -74,24 +76,6 @@ const members = {
       status: "Stable",
       answer: "Dad is following his usual routine.",
       detail: "He completed his morning walk at 07:52. Activity, heart rate, and routine are all within his personal baseline.",
-    },
-  },
-  me: {
-    initial: "E",
-    tone: "private",
-    zh: {
-      relation: "自己",
-      name: "Elena",
-      status: "共享范围正常",
-      answer: "你的家庭照护设置已同步。",
-      detail: "你只与家庭圈共享照护日程和紧急联系人，不共享个人健康详情。",
-    },
-    en: {
-      relation: "Me",
-      name: "Elena",
-      status: "Sharing is up to date",
-      answer: "Your family care settings are in sync.",
-      detail: "You share only care schedules and emergency contacts with the family circle, not your personal health details.",
     },
   },
 } as const;
@@ -228,6 +212,7 @@ export function FamilyCareDashboard() {
   const [mobileView, setMobileView] = useState<MobileView>("safe");
   const [desktopView, setDesktopView] = useState<DesktopView>("overview");
   const [member, setMember] = useState<MemberId>("mum");
+  const [profilePickerOpen, setProfilePickerOpen] = useState(false);
   const [metric, setMetric] = useState<MetricId>("activity");
   const [decision, setDecision] = useState<Decision>("pending");
   const [alertRead, setAlertRead] = useState(false);
@@ -237,6 +222,9 @@ export function FamilyCareDashboard() {
   const t = (zh: string, en: string) => text(language, zh, en);
   const selectedMember = members[member][language];
   const callLabel = calling ? t("正在拨打妈妈…", "Calling Mum…") : t("联系妈妈", "Call Mum");
+  const selectedCallLabel = calling
+    ? t(`正在拨打${selectedMember.name}…`, `Calling ${selectedMember.name}…`)
+    : t(`联系${selectedMember.name}`, `Call ${selectedMember.name}`);
 
   const callMum = () => {
     setCalling(true);
@@ -290,22 +278,52 @@ export function FamilyCareDashboard() {
             <div className="family-brand"><span><HeartHandshake size={22} /></span><div><strong>KinKeep</strong><small>{t("上午好，Elena", "Good morning, Elena")}</small></div></div>
             <div className="family-mobile-actions"><Link className="family-button compact" href="/">{t("用户端", "User view")}</Link><LanguageSwitch language={language} onChange={setLanguage} /></div>
           </div>
-          <nav className="family-mobile-tabs" aria-label={t("家属端页面", "Family views")}>
-            <button className={mobileView === "safe" ? "selected" : ""} onClick={() => setMobileView("safe")} aria-pressed={mobileView === "safe"}>{t("安心", "Status")}</button>
-            <button className={mobileView === "alerts" ? "selected" : ""} onClick={() => setMobileView("alerts")} aria-pressed={mobileView === "alerts"}>{t("通知", "Alerts")} <span>1</span></button>
-            <button className={mobileView === "approvals" ? "selected" : ""} onClick={() => setMobileView("approvals")} aria-pressed={mobileView === "approvals"}>{t("待批准", "Approvals")} <span>1</span></button>
-          </nav>
         </header>
 
         <div className="family-mobile-content">
           {mobileView === "safe" && (
             <>
+              <section className="family-profile-control" aria-label={t("当前健康档案", "Current health profile")}>
+                <small>{t("当前健康档案", "Current health profile")}</small>
+                <button
+                  className="family-profile-selector"
+                  onClick={() => setProfilePickerOpen((open) => !open)}
+                  aria-expanded={profilePickerOpen}
+                  aria-controls="family-profile-picker"
+                >
+                  <span className={`family-avatar ${members[member].tone}`}>{members[member].initial}</span>
+                  <span className="family-profile-selector-copy">
+                    <strong>{selectedMember.name}</strong>
+                    <small>{selectedMember.relation} · {selectedMember.status}</small>
+                  </span>
+                  <ChevronDown size={20} aria-hidden="true" />
+                </button>
+                {profilePickerOpen && (
+                  <div id="family-profile-picker" className="family-profile-picker" aria-label={t("选择健康档案", "Choose a health profile")}>
+                    <div className="family-between"><strong>{t("选择健康档案", "Choose a health profile")}</strong><small>{t("2 个档案", "2 profiles")}</small></div>
+                    {(Object.keys(members) as MemberId[]).map((id) => (
+                      <button
+                        key={id}
+                        className={member === id ? "selected" : ""}
+                        onClick={() => { setMember(id); setProfilePickerOpen(false); }}
+                        aria-pressed={member === id}
+                      >
+                        <span className={`family-avatar ${members[id].tone}`}>{members[id].initial}</span>
+                        <span><strong>{members[id][language].name}</strong><small>{members[id][language].relation} · {members[id][language].status}</small></span>
+                        {member === id && <CheckCircle2 size={18} aria-hidden="true" />}
+                      </button>
+                    ))}
+                    <button className="family-profile-more" onClick={() => { setProfilePickerOpen(false); setMobileView("family"); }}>
+                      <UsersRound size={18} />{t("查看全部健康档案", "View all health profiles")}<ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
+              </section>
               <section className="family-mobile-hero">
-                <small>{selectedMember.relation} · {selectedMember.name}</small>
                 <span className={`family-badge ${members[member].tone}`}>{selectedMember.status}</span>
                 <h1>{selectedMember.answer}</h1>
                 <p>{selectedMember.detail}</p>
-                {member === "mum" && <div className="family-actions"><button className="family-button primary" onClick={callMum}><Phone size={17} />{callLabel}</button><button className="family-button" onClick={() => setMobileView("alerts")}><ListChecks size={17} />{t("查看依据", "View evidence")}</button></div>}
+                <div className="family-actions"><button className="family-button primary" onClick={callMum}><Phone size={17} />{selectedCallLabel}</button>{member === "mum" && <button className="family-button" onClick={() => setMobileView("alerts")}><ListChecks size={17} />{t("查看依据", "View evidence")}</button>}</div>
               </section>
               <section className="family-mobile-section">
                 <h2>{member === "mum" ? t("为什么需要留意", "Why she needs attention") : t("今天的关键信息", "Today's key information")}</h2>
@@ -315,15 +333,10 @@ export function FamilyCareDashboard() {
                     <div className="family-signal"><span><Footprints size={18} /></span><div><strong>{t("上午活动明显偏少", "Morning activity is much lower")}</strong><small>{t("320 步 · 平时此时约 2,400 步", "320 steps · usually about 2,400 by now")}</small></div></div>
                     <div className="family-signal"><span><MessageCircle size={18} /></span><div><strong>{t("已完成第一轮问候", "First check-in completed")}</strong><small>{t("确认在家，提到膝盖轻微不适", "She is at home and mentioned mild knee pain")}</small></div></div>
                   </div>
-                ) : member === "dad" ? (
+                ) : (
                   <div className="family-signal-list">
                     <div className="family-signal"><span><Footprints size={18} /></span><div><strong>{t("晨间散步已完成", "Morning walk completed")}</strong><small>{t("2,680 步 · 在个人正常范围内", "2,680 steps · within his personal range")}</small></div></div>
                     <div className="family-signal"><span><HeartPulse size={18} /></span><div><strong>{t("静息心率稳定", "Resting heart rate is steady")}</strong><small>{t("65 bpm · 与个人基线一致", "65 bpm · in line with his baseline")}</small></div></div>
-                  </div>
-                ) : (
-                  <div className="family-signal-list">
-                    <div className="family-signal"><span><ShieldCheck size={18} /></span><div><strong>{t("共享范围已确认", "Sharing scope confirmed")}</strong><small>{t("家人只能看到你授权的日程和联系人", "Family can only see schedules and contacts you approved")}</small></div></div>
-                    <div className="family-signal"><span><UsersRound size={18} /></span><div><strong>{t("你是主要联系人", "You are the primary contact")}</strong><small>{t("负责高影响行动批准与紧急联络", "You approve high-impact actions and receive emergency updates")}</small></div></div>
                   </div>
                 )}
               </section>
@@ -350,15 +363,26 @@ export function FamilyCareDashboard() {
               <DecisionPanel decision={decision} language={language} onDecision={setDecision} />
             </section>
           )}
+
+          {mobileView === "family" && (
+            <section className="family-mobile-section family-stack family-mobile-family">
+              <div><h1>{t("家庭", "Family")}</h1><p>{t("4 位成员 · 2 个健康档案 · 2 位家属协作者", "4 members · 2 health profiles · 2 family caregivers")}</p></div>
+              <div className="family-care-circle-list">
+                <div><span className="family-avatar attention">陈</span><span><strong>{t("陈阿姨", "Mdm Tan")}</strong><small>{t("妈妈 · 健康档案", "Mum · health profile")}</small></span><span className="family-badge attention">{t("需要留意", "Needs attention")}</span></div>
+                <div><span className="family-avatar">爸</span><span><strong>{t("陈叔叔", "Mr Tan")}</strong><small>{t("爸爸 · 健康档案", "Dad · health profile")}</small></span><span className="family-badge stable">{t("状态稳定", "Stable")}</span></div>
+                <div><span className="family-avatar">E</span><span><strong>Elena</strong><small>{t("主要联系人 · 家属协作者", "Primary contact · family caregiver")}</small></span><span className="family-badge private">{t("权限受限", "Limited access")}</span></div>
+                <div><span className="family-avatar">{t("弟", "B")}</span><span><strong>{t("弟弟", "Brother")}</strong><small>{t("照护分工 · 家属协作者", "Care tasks · family caregiver")}</small></span><span className="family-badge stable">{t("照护协作", "Care collaborator")}</span></div>
+              </div>
+              <p className="family-mobile-family-note">{t("只有已连接健康数据的人会出现在健康档案选择器中；其他成员仍可参与照护与权限分工。", "Only people with connected health data appear in the profile selector. Other members can still share care tasks and permissions.")}</p>
+            </section>
+          )}
         </div>
 
-        <nav className="family-member-nav" aria-label={t("健康档案", "Health profiles")}>
-          {(Object.keys(members) as MemberId[]).map((id) => (
-            <button key={id} className={member === id ? "selected" : ""} onClick={() => { setMember(id); setMobileView("safe"); }} aria-pressed={member === id}>
-              {id === "mum" ? <HeartHandshake size={18} /> : id === "dad" ? <UserRound size={18} /> : <ShieldCheck size={18} />}
-              {members[id][language].relation}
-            </button>
-          ))}
+        <nav className="family-mobile-nav" aria-label={t("家属端功能", "Family app navigation")}>
+          <button className={mobileView === "safe" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("safe"); }} aria-pressed={mobileView === "safe"}><Home size={19} />{t("首页", "Home")}</button>
+          <button className={mobileView === "alerts" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("alerts"); }} aria-pressed={mobileView === "alerts"}><span className="family-nav-icon"><Bell size={19} /><em>1</em></span>{t("通知", "Alerts")}</button>
+          <button className={mobileView === "approvals" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("approvals"); }} aria-pressed={mobileView === "approvals"}><span className="family-nav-icon"><ShieldCheck size={19} /><em>1</em></span>{t("待批准", "Approvals")}</button>
+          <button className={mobileView === "family" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("family"); }} aria-pressed={mobileView === "family"}><UsersRound size={19} />{t("家庭", "Family")}</button>
         </nav>
       </section>
 
@@ -372,7 +396,7 @@ export function FamilyCareDashboard() {
             <button className={desktopView === "care" ? "selected" : ""} onClick={() => setDesktopView("care")} aria-pressed={desktopView === "care"}><CalendarDays size={18} />{t("照护日程", "Care schedule")}</button>
             <button className={desktopView === "records" ? "selected" : ""} onClick={() => setDesktopView("records")} aria-pressed={desktopView === "records"}><ShieldCheck size={18} />{t("操作与权限", "Activity & access")}</button>
           </nav>
-          <div className="family-household"><small>{t("当前家庭", "Current family")}</small><strong>{t("陈家 · 4 位成员", "Tan family · 4 members")}</strong><span>{t("3 个健康档案 · 2 位家属协作者", "3 health profiles · 2 family caregivers")}</span></div>
+          <div className="family-household"><small>{t("当前家庭", "Current family")}</small><strong>{t("陈家 · 4 位成员", "Tan family · 4 members")}</strong><span>{t("2 个健康档案 · 2 位家属协作者", "2 health profiles · 2 family caregivers")}</span></div>
           <Link className="family-button" href="/">{t("返回用户端", "Back to user view")}</Link>
         </aside>
 
