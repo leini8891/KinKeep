@@ -55,6 +55,7 @@ type Message = {
   syncing?: boolean;
   nutrition?: NutritionAnalysis;
   loading?: boolean;
+  replying?: boolean;
   error?: string;
   escalation?: CareEscalation;
 };
@@ -151,6 +152,7 @@ const copy = {
     unsupported: "当前浏览器无法使用语音识别，可以继续输入文字。",
     microphoneError: "无法使用麦克风，请允许麦克风权限后重试。",
     voiceError: "没有听清楚，请再说一次。",
+    thinking: "陪伴助手正在回复…",
     input: "想说什么都可以…",
     defaultReply: "谢谢你告诉我。还有哪里不舒服，或者需要我提醒什么吗？",
     privacy: "只有经过你同意的更新才会与 Elena 共享",
@@ -248,6 +250,7 @@ const copy = {
     unsupported: "Voice recognition is not available in this browser. You can continue by typing.",
     microphoneError: "The microphone is unavailable. Allow microphone access and try again.",
     voiceError: "I did not catch that. Please try again.",
+    thinking: "Companion is replying…",
     input: "You can tell me anything…",
     defaultReply: "Thank you for telling me. Is anything else uncomfortable, or is there something you want me to remind you about?",
     privacy: "Only the updates you approve are shared with Elena",
@@ -277,6 +280,7 @@ export function ParentHealthChat() {
   const [voiceState, setVoiceState] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -513,33 +517,50 @@ export function ParentHealthChat() {
     }
   })();
 
-  const processText = (text: string) => {
+  const processText = async (text: string) => {
     const normalized = text.toLowerCase();
-    if (/帮助|help|紧急|urgent/.test(normalized)) {
+    if (/帮助|help|紧急|urgent|胸痛|胸闷|呼吸困难|喘不过气|跌倒|摔倒|晕倒|迷路|chest pain|can'?t breathe|fell|fall|faint|lost/.test(normalized)) {
       addMessage({ role: "assistant", tone: "alert", text: t.urgentAsk });
       setStep("help-urgent");
-    } else if (/膝|knee|痛|pain/.test(normalized)) {
-      addMessage({ role: "assistant", text: t.kneeAsk });
-      setStep("knee-duration");
-    } else if (/睡|sleep|累|tired/.test(normalized)) {
-      addMessage({ role: "assistant", text: t.sleepAsk });
-      setStep("sleep-symptoms");
-    } else if (/吃|饭|胃口|meal|food|appetite/.test(normalized)) {
-      addMessage({ role: "assistant", text: t.appetiteAsk });
-      setStep("meal-photo");
-    } else {
-      addMessage({ role: "assistant", text: t.defaultReply });
+      return;
+    }
+
+    const replyMessageId = nextMessageId++;
+    setIsReplying(true);
+    setMessages((current) => [...current, { id: replyMessageId, role: "assistant", tone: "status", replying: true }]);
+
+    try {
+      const response = await fetch("/api/companion-reply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          language,
+          message: text,
+          healthSynced: isWatchSynced,
+          history: messages
+            .filter((message) => message.text)
+            .slice(-10)
+            .map((message) => ({ role: message.role, text: message.text })),
+        }),
+      });
+      const payload = (await response.json()) as { reply?: string };
+      if (!response.ok || !payload.reply) throw new Error("No reply");
+      setMessages((current) => current.map((message) => message.id === replyMessageId ? { ...message, replying: false, tone: "normal", text: payload.reply } : message));
+    } catch {
+      setMessages((current) => current.map((message) => message.id === replyMessageId ? { ...message, replying: false, tone: "normal", text: t.defaultReply } : message));
+    } finally {
+      setIsReplying(false);
       setStep("initial");
     }
   };
 
   const sendDraft = () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || isReplying) return;
     setDraft("");
     setVoiceState("");
     addMessage({ role: "user", text });
-    window.setTimeout(() => processText(text), 250);
+    void processText(text);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -756,6 +777,11 @@ export function ParentHealthChat() {
                     {message.syncing ? t.watchSyncing : t.watchSyncButton}
                   </button>
                 </div>
+              ) : message.replying ? (
+                <div className="nutrition-loading" role="status">
+                  <LoaderCircle size={20} />
+                  <span>{t.thinking}</span>
+                </div>
               ) : message.loading ? (
                 <div className="nutrition-loading" role="status">
                   <LoaderCircle size={20} />
@@ -860,7 +886,7 @@ export function ParentHealthChat() {
           ><Mic size={21} /></button>
           <div className="text-entry">
             <input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleKeyDown} placeholder={t.input} aria-label={t.input} />
-            <button onClick={sendDraft} aria-label="Send"><Send size={19} /></button>
+            <button onClick={sendDraft} aria-label="Send" disabled={isReplying}><Send size={19} /></button>
           </div>
           <button className="icon-button" onClick={() => fileRef.current?.click()} aria-label={t.uploadMeal}><Camera size={21} /></button>
           <input ref={fileRef} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" onChange={handlePhoto} />
