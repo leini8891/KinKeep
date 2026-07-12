@@ -29,7 +29,9 @@ test("server-renders the KinKeep parent companion", async () => {
   assert.match(html, /用户端/);
   assert.match(html, /家属端/);
   assert.doesNotMatch(html, /妈妈端/);
-  assert.match(html, /需要帮助/);
+  assert.doesNotMatch(html, /点麦克风说话；录音仅用于本次转写/);
+  assert.doesNotMatch(html, /需要帮助/);
+  assert.doesNotMatch(html, /昨晚睡得比平时少一些/);
   assert.match(html, /href="\/family"/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
 });
@@ -48,7 +50,9 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(html, /返回用户端/);
   assert.match(html, /陈家 · 4 位成员/);
   assert.match(html, /弟弟 · 家属协作者/);
-  assert.match(html, /3 个健康档案 · 2 位家属协作者/);
+  assert.match(html, /当前健康档案/);
+  assert.match(html, /2 个健康档案 · 2 位家属协作者/);
+  assert.match(html, /家属端功能/);
   assert.match(html, />EN<\/button>/);
   assert.match(html, />中文<\/button>/);
   assert.doesNotMatch(html, /妈妈端/);
@@ -61,5 +65,20 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(familyBundle, /Actions awaiting approval/);
   assert.match(familyBundle, /Back to user view/);
   assert.match(familyBundle, /Brother · family collaborator/);
-  assert.match(familyBundle, /3 health profiles · 2 family caregivers/);
+  assert.match(familyBundle, /Current health profile/);
+  assert.match(familyBundle, /View all health profiles/);
+  assert.match(familyBundle, /2 health profiles · 2 family caregivers/);
+  assert.match(familyBundle, /Family app navigation/);
+});
+
+test("server-renders the desktop-friendly family mobile preview", async () => {
+  const response = await render("/family/mobile-preview");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /家属端手机效果/);
+  assert.match(html, /390 × 844/);
+  assert.match(html, /src="\/family"/);
+  assert.match(html, /打开 PC 版/);
+  assert.match(html, /This preview keeps the live mobile interactions/);
 });

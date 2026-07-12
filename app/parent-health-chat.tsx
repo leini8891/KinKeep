@@ -23,6 +23,14 @@ import {
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { NutritionAnalysis } from "./nutrition";
+import { CareEscalationCard } from "./care-escalation-card";
+import {
+  createCareEscalation,
+  saveCareEscalation,
+  type CareEscalation,
+  type EscalationKind,
+  type EscalationStage,
+} from "./care-escalation";
 
 type Language = "zh" | "en";
 type Step =
@@ -48,25 +56,9 @@ type Message = {
   nutrition?: NutritionAnalysis;
   loading?: boolean;
   error?: string;
+  escalation?: CareEscalation;
 };
 type QuickAction = { id: string; label: string; important?: boolean };
-
-type SpeechRecognitionResultEvent = {
-  results: { [index: number]: { [index: number]: { transcript: string } } };
-};
-
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
-  start: () => void;
-};
-
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const copy = {
   zh: {
@@ -145,8 +137,14 @@ const copy = {
     callElena: "请 Elena 联系我",
     notUrgent: "不紧急",
     urgentDone: "已向 Elena 发送紧急通知，并附上你授权共享的位置和最新健康信息。",
-    listening: "正在听你说…",
+    voiceInput: "开始语音输入",
+    stopVoice: "结束录音",
+    voiceHint: "点麦克风说话；录音仅用于本次转写",
+    listening: "正在听，请说话…",
+    transcribing: "正在把语音转成文字…",
+    voiceReady: "已识别，请确认文字后点击发送",
     unsupported: "当前浏览器无法使用语音识别，可以继续输入文字。",
+    microphoneError: "无法使用麦克风，请允许麦克风权限后重试。",
     voiceError: "没有听清楚，请再说一次。",
     input: "想说什么都可以…",
     defaultReply: "谢谢你告诉我。还有哪里不舒服，或者需要我提醒什么吗？",
@@ -231,8 +229,14 @@ const copy = {
     callElena: "Ask Elena to call",
     notUrgent: "Not urgent",
     urgentDone: "An urgent alert was sent to Elena with your approved location and latest health update.",
-    listening: "Listening…",
+    voiceInput: "Start voice input",
+    stopVoice: "Stop recording",
+    voiceHint: "Tap the microphone; audio is used only for this transcription",
+    listening: "Listening — please speak…",
+    transcribing: "Turning your voice into text…",
+    voiceReady: "Transcript ready — review it, then tap send",
     unsupported: "Voice recognition is not available in this browser. You can continue by typing.",
+    microphoneError: "The microphone is unavailable. Allow microphone access and try again.",
     voiceError: "I did not catch that. Please try again.",
     input: "You can tell me anything…",
     defaultReply: "Thank you for telling me. Is anything else uncomfortable, or is there something you want me to remind you about?",
@@ -245,27 +249,29 @@ const copy = {
 
 let nextMessageId = 10;
 
-function initialMessages(language: Language): Message[] {
-  const t = copy[language];
-  return [
-    { id: 1, role: "watch", tone: "status", watchSync: true },
-    { id: 2, role: "assistant", text: t.hello },
-  ];
+function initialMessages(): Message[] {
+  return [{ id: 1, role: "watch", tone: "status", watchSync: true }];
 }
 
 export function ParentHealthChat() {
   const [language, setLanguage] = useState<Language>("zh");
-  const [messages, setMessages] = useState<Message[]>(() => initialMessages("zh"));
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [step, setStep] = useState<Step>("initial");
   const [draft, setDraft] = useState("");
   const [voiceState, setVoiceState] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
-  const voiceModeRef = useRef(false);
   const watchSyncTimerRef = useRef<number | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const voiceTimeoutRef = useRef<number | null>(null);
+  const escalationTimersRef = useRef<number[]>([]);
   const t = copy[language];
+  const isWatchSynced = messages.some((message) => message.health);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -273,23 +279,40 @@ export function ParentHealthChat() {
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current;
+    const escalationTimers = escalationTimersRef.current;
     return () => {
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
       if (watchSyncTimerRef.current !== null) window.clearTimeout(watchSyncTimerRef.current);
+      if (voiceTimeoutRef.current !== null) window.clearTimeout(voiceTimeoutRef.current);
+      escalationTimers.forEach((timer) => window.clearTimeout(timer));
+      if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
-  const speak = (text: string) => {
-    if (!voiceModeRef.current || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === "zh" ? "zh-CN" : "en-SG";
-    window.speechSynthesis.speak(utterance);
-  };
-
   const addMessage = (message: Omit<Message, "id">) => {
     setMessages((current) => [...current, { ...message, id: nextMessageId++ }]);
-    if (message.role === "assistant" && message.text) speak(message.text);
+  };
+
+  const advanceEscalation = (id: string, stage: EscalationStage) => {
+    setMessages((current) =>
+      current.map((message) => {
+        if (message.escalation?.id !== id) return message;
+        const escalation = { ...message.escalation, stage };
+        saveCareEscalation(escalation);
+        return { ...message, escalation };
+      }),
+    );
+  };
+
+  const startEscalation = (kind: EscalationKind) => {
+    const escalation = createCareEscalation(kind);
+    saveCareEscalation(escalation);
+    addMessage({ role: "assistant", tone: "alert", escalation });
+    escalationTimersRef.current.push(
+      window.setTimeout(() => advanceEscalation(escalation.id, "primary_multichannel"), 1200),
+      window.setTimeout(() => advanceEscalation(escalation.id, "backup_acknowledged"), 2800),
+    );
   };
 
   const resetConversation = (nextLanguage: Language) => {
@@ -298,7 +321,7 @@ export function ParentHealthChat() {
       watchSyncTimerRef.current = null;
     }
     setLanguage(nextLanguage);
-    setMessages(initialMessages(nextLanguage));
+    setMessages(initialMessages());
     setStep("initial");
     setVoiceState("");
   };
@@ -310,20 +333,24 @@ export function ParentHealthChat() {
       ),
     );
     watchSyncTimerRef.current = window.setTimeout(() => {
-      setMessages((current) =>
-        current.map((message) =>
+      setMessages((current) => {
+        const syncedMessages = current.map((message) =>
           message.id === 1
             ? { ...message, watchSync: false, syncing: false, health: true }
             : message,
-        ),
-      );
+        );
+        return syncedMessages.some((message) => message.id === 2)
+          ? syncedMessages
+          : [...syncedMessages, { id: 2, role: "assistant", text: t.hello }];
+      });
       watchSyncTimerRef.current = null;
     }, 900);
   };
 
   const finishCallChoice = (notify: boolean) => {
     addMessage({ role: "user", text: notify ? t.yesCall : t.noCall });
-    addMessage({ role: "assistant", tone: notify ? "status" : "normal", text: notify ? t.callDone : t.noteDone });
+    if (notify) startEscalation("symptom");
+    else addMessage({ role: "assistant", text: t.noteDone });
     setStep("done");
   };
 
@@ -348,7 +375,7 @@ export function ParentHealthChat() {
     }
     if (action === "severe") {
       addMessage({ role: "user", text: t.severe });
-      addMessage({ role: "assistant", tone: "alert", text: t.callDone });
+      startEscalation("urgent");
       setStep("done");
       return;
     }
@@ -360,7 +387,10 @@ export function ParentHealthChat() {
     }
     if (action === "no-symptom" || action === "dizzy") {
       addMessage({ role: "user", text: action === "dizzy" ? t.dizzy : t.noSymptom });
-      addMessage({ role: "assistant", tone: action === "dizzy" ? "alert" : "normal", text: action === "dizzy" ? t.dizzyDone : t.sleepDone });
+      if (action === "dizzy") {
+        addMessage({ role: "assistant", tone: "alert", text: language === "zh" ? "请先坐到安全的地方。照护升级已启动。" : "Please sit somewhere safe. Care escalation has started." });
+        startEscalation("urgent");
+      } else addMessage({ role: "assistant", text: t.sleepDone });
       setStep("done");
       return;
     }
@@ -396,13 +426,14 @@ export function ParentHealthChat() {
     }
     if (action === "urgent") {
       addMessage({ role: "user", text: t.urgent });
-      addMessage({ role: "assistant", tone: "alert", text: t.urgentDone });
+      addMessage({ role: "assistant", tone: "alert", text: language === "zh" ? "请留在安全位置。照护升级已启动。" : "Stay somewhere safe. Care escalation has started." });
+      startEscalation("urgent");
       setStep("done");
       return;
     }
     if (action === "call-elena") {
       addMessage({ role: "user", text: t.callElena });
-      addMessage({ role: "assistant", tone: "status", text: t.callDone });
+      startEscalation("symptom");
       setStep("done");
       return;
     }
@@ -480,6 +511,7 @@ export function ParentHealthChat() {
     const text = draft.trim();
     if (!text) return;
     setDraft("");
+    setVoiceState("");
     addMessage({ role: "user", text });
     window.setTimeout(() => processText(text), 250);
   };
@@ -557,7 +589,6 @@ export function ParentHealthChat() {
             : message,
         ),
       );
-      speak(`${payload.analysis.summary} ${payload.analysis.suggestion}`);
     } catch (error) {
       setMessages((current) =>
         current.map((message) =>
@@ -573,41 +604,84 @@ export function ParentHealthChat() {
     }
   };
 
-  const startVoice = () => {
-    const speechWindow = window as typeof window & {
-      SpeechRecognition?: SpeechRecognitionConstructor;
-      webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    };
-    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-    if (!Recognition) {
+  const transcribeRecording = async (audio: Blob) => {
+    setIsTranscribing(true);
+    setVoiceState(t.transcribing);
+    const formData = new FormData();
+    const extension = audio.type.includes("mp4") ? "mp4" : audio.type.includes("ogg") ? "ogg" : "webm";
+    formData.append("audio", audio, `voice-input.${extension}`);
+    formData.append("language", language);
+
+    try {
+      const response = await fetch("/api/transcribe", { method: "POST", body: formData });
+      const contentType = response.headers.get("content-type") ?? "";
+      const payload = contentType.includes("application/json")
+        ? (await response.json()) as { text?: string; error?: string }
+        : { error: t.voiceError };
+      if (!response.ok || !payload.text) throw new Error(payload.error || t.voiceError);
+      setDraft(payload.text);
+      setVoiceState(t.voiceReady);
+    } catch (error) {
+      setVoiceState(error instanceof Error ? error.message : t.voiceError);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (voiceTimeoutRef.current !== null) {
+      window.clearTimeout(voiceTimeoutRef.current);
+      voiceTimeoutRef.current = null;
+    }
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
+  };
+
+  const startVoiceRecording = async () => {
+    if (!("MediaRecorder" in window) || !navigator.mediaDevices?.getUserMedia) {
       setVoiceState(t.unsupported);
       return;
     }
 
-    const recognition = new Recognition();
-    recognition.lang = language === "zh" ? "zh-CN" : "en-SG";
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognition.onstart = () => {
-      voiceModeRef.current = true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+      const preferredType = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"]
+        .find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        setIsListening(false);
+        setVoiceState(t.voiceError);
+      };
+      recorder.onstop = () => {
+        setIsListening(false);
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        const audio = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        audioChunksRef.current = [];
+        if (audio.size === 0) {
+          setVoiceState(t.voiceError);
+          return;
+        }
+        void transcribeRecording(audio);
+      };
+      recorder.start();
       setIsListening(true);
       setVoiceState(t.listening);
-    };
-    recognition.onend = () => {
+      voiceTimeoutRef.current = window.setTimeout(stopVoiceRecording, 12_000);
+    } catch {
       setIsListening(false);
-      setVoiceState((current) => (current === t.listening ? "" : current));
-    };
-    recognition.onerror = () => {
-      setIsListening(false);
-      setVoiceState(t.voiceError);
-    };
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setVoiceState("");
-      addMessage({ role: "user", text: transcript });
-      window.setTimeout(() => processText(transcript), 250);
-    };
-    recognition.start();
+      setVoiceState(t.microphoneError);
+    }
+  };
+
+  const handleVoiceInput = () => {
+    if (isListening) stopVoiceRecording();
+    else void startVoiceRecording();
   };
 
   return (
@@ -706,6 +780,8 @@ export function ParentHealthChat() {
                   <span>{message.error}</span>
                   <button onClick={() => fileRef.current?.click()}>{t.retryPhoto}</button>
                 </div>
+              ) : message.escalation ? (
+                <CareEscalationCard escalation={message.escalation} language={language} audience="parent" />
               ) : message.health ? (
                 <div className="health-summary">
                   <div className="health-summary-title"><strong>{t.healthTitle}</strong><span>{t.synced}</span></div>
@@ -731,7 +807,7 @@ export function ParentHealthChat() {
         <div ref={endRef} />
       </section>
 
-      {quickActions.length > 0 && (
+      {isWatchSynced && quickActions.length > 0 && (
         <div className="quick-actions" aria-label="Suggested replies">
           {quickActions.map((action) => (
             <button key={action.id} className={action.important ? "important" : ""} onClick={() => handleAction(action.id)}>{action.label}</button>
@@ -739,13 +815,20 @@ export function ParentHealthChat() {
         </div>
       )}
 
-      <footer className="chat-controls">
+      {isWatchSynced && <footer className="chat-controls">
         <div className="safety-actions">
           <button className="well-button" onClick={() => handleAction("well")}><Smile size={20} />{t.well}</button>
           <button className="help-button" onClick={() => handleAction("help")}><Siren size={20} />{t.help}</button>
         </div>
         <div className="composer">
-          <button className={`icon-button ${isListening ? "listening" : ""}`} onClick={startVoice} aria-label={t.listening}><Mic size={21} /></button>
+          <button
+            className={`icon-button ${isListening ? "listening" : ""}`}
+            onClick={handleVoiceInput}
+            aria-label={isListening ? t.stopVoice : t.voiceInput}
+            aria-pressed={isListening}
+            disabled={isTranscribing}
+            title={isListening ? t.stopVoice : t.voiceInput}
+          ><Mic size={21} /></button>
           <div className="text-entry">
             <input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleKeyDown} placeholder={t.input} aria-label={t.input} />
             <button onClick={sendDraft} aria-label="Send"><Send size={19} /></button>
@@ -753,9 +836,9 @@ export function ParentHealthChat() {
           <button className="icon-button" onClick={() => fileRef.current?.click()} aria-label={t.uploadMeal}><Camera size={21} /></button>
           <input ref={fileRef} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" onChange={handlePhoto} />
         </div>
-        <div className="voice-state" role="status">{voiceState}</div>
+        <div className={`voice-state ${isListening || isTranscribing ? "active" : ""}`} role="status">{voiceState || t.voiceHint}</div>
         <div className="privacy-note"><CheckCircle2 size={15} />{t.privacy}</div>
-      </footer>
+      </footer>}
     </section>
   );
 }

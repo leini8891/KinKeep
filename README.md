@@ -1,45 +1,95 @@
+<div align="center">
+
 # KinKeep
 
-KinKeep is a family health companion for older adults and the relatives who care about them from a distance.
+### A family health companion that notices meaningful changes, checks in with your parent, and tells you when you're needed.
 
-KinKeep now ships as one product with two connected surfaces:
+_Agents own the execution. Families retain judgment and control._
 
-- `/` — the parent-facing mobile experience, opening directly into a bilingual conversation;
-- `/family` — a responsive family experience that presents a focused mobile view on phones and a broader care workspace on desktop.
+<br/>
 
-The parent experience includes:
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-kinkeep--family--health-0F4C4C?style=for-the-badge)](https://kinkeep-family-health.leini9591.chatgpt.site/)
 
-- an Apple Watch health summary embedded in the chat;
-- medication, meal, and activity reminders;
-- multi-step wellness check-ins and help escalation;
-- real meal-photo upload with server-side OpenAI vision analysis, calorie range, macro estimates, visible uncertainty, and a practical nutrition suggestion;
-- typed messages and browser speech recognition when supported;
-- English and Simplified Chinese.
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 
-The family experience includes:
+[![Event](https://img.shields.io/badge/BUIDL__QUESTS_2026-OPC_·_Super_Individuals-E8A13D)](https://openarena.to/en/events/buidl-quests-2026)
+[![Languages](https://img.shields.io/badge/Bilingual-English_·_简体中文-7FA98F)](#)
+[![Non-diagnostic](https://img.shields.io/badge/⚕️-Non--diagnostic_·_synthetic_demo_data-64748B)](#)
 
-- family profiles for Mum, Dad, and Elena with relationship-aware sharing;
-- a direct answer to “Is Mum okay?” on mobile;
-- multi-signal personal-baseline evidence across sleep, activity, resting heart rate, routine, and replies;
-- immediate alerts and a human approval gate for high-impact actions;
-- desktop family overview, trends, care schedule, assignments, audit history, and permissions.
+</div>
 
-The current risk and caregiver-escalation responses are deterministic demo fixtures. Meal analysis uses the OpenAI Responses API when `OPENAI_API_KEY` is configured. All guidance is intentionally non-diagnostic and does not contact real caregivers or emergency services.
+> [!IMPORTANT]
+> KinKeep is **not a medical diagnostic tool**. All health signals, calls, and care actions in this demo are deterministic synthetic fixtures. Care branching, escalation stages and approval gating are **auditable code — never model output**. No real caregiver, clinic, or emergency service is contacted.
 
-The current product scope, sovereignty model, demo scenarios, and OPC roadmap are documented in [docs/PRD_KinKeep_OPC.md](docs/PRD_KinKeep_OPC.md).
+---
 
-## Local development
+## 🎯 The idea
 
-Requires Node.js 22.13 or newer.
+Every family has a *kinkeeper* — the one who remembers the pills, makes the daily call, coordinates everything. Apple Health can already share Mum's heart rate with her. But **numbers are not care**: they don't ask how Mum's knee feels, don't notice that she slept two hours less *and* walked only 320 steps *and* skipped breakfast on the same morning, and don't tell a busy daughter whether *today* is a day that needs her.
+
+KinKeep closes that loop:
+
+```
+Personal change detection        Conversational check-in       One decision for the family
+multi-signal, vs HER own    →    in her language, she just  →  first round of care completed;
+baseline — never one number      answers, never initiates      humans keep the judgment
+```
+
+The elder gets a companion that talks like a person. The family gets silence when all is well — and a completed first round of checks plus **one clear decision** when it is not.
+
+## ✨ One product, two surfaces
+
+**Try it live:** [kinkeep-family-health.leini9591.chatgpt.site](https://kinkeep-family-health.leini9591.chatgpt.site/) — parent at `/`, family at `/family`. Bilingual (EN / 简体中文) everywhere, switchable at runtime.
+
+### 📱 `/` — the parent's side: it opens talking
+
+| | |
+|---|---|
+| 💬 **Conversation-first** | No dashboard, no charts. Quick-reply chips instead of typing — she answers, she never has to initiate |
+| ⌚ **Watch summary in the chat** | Tap-to-sync Apple Watch morning card: sleep −1h · steps low · vs *her own* usual (simulated stream today) |
+| 🩺 **Structured check-ins** | Knee pain → duration triage → *"Shall I ask Elena to call you today?"* → family notified. Poor sleep → symptom triage, with a safety path for dizziness |
+| 🍜 **Real meal-photo analysis** | Server-side OpenAI vision: calorie range, macros, fibre/sodium/veg, portion, **visible uncertainty**, one practical suggestion |
+| 🎙️ **Real voice input** | In-browser recording → server-side transcription (zh/en), browser speech recognition where supported |
+| 🆘 **"I need help"** | Starts a staged care escalation — notification channels widen; nothing is ever auto-dialled |
+
+### 👨‍👩‍👧 `/family` — the family's side: an answer, not a feed
+
+| | |
+|---|---|
+| ✅ **"Is Mum okay?" answered** | One sentence with plain-language reasoning — evidence bullets, not raw data |
+| 👥 **Relationship-aware profiles** | Mum · Dad · self · brother — each with a scoped permission level, not one feed for everyone |
+| 📈 **Trends & evidence** | 7-day activity / sleep / resting HR / routine-match, each drawn against her **personal range band**, with "why today was flagged" |
+| 🤝 **Approval gate** | High-impact actions (e.g. suggesting telehealth) pause with evidence + the matched policy reason; approve/decline both produce honest outcomes |
+| 🗓️ **Care schedule & roles** | Family + companion tasks on one timeline; weekly assignments across Elena, brother, and the companion |
+| 📜 **Audit & access** | Who viewed, who decided, what the system did — including *"Mum approved sharing this reply"*: **consent runs both directions** |
+| 🚨 **Wandering escalation demo** | One click: staged escalation (push → multichannel → acknowledged) syncing **live across both surfaces**, with location/HR/battery context |
+
+## 🛡️ The sovereignty model
+
+The hackathon theme is *Agents & Sovereignty*. Most agent demos show autonomy; KinKeep shows **where autonomy must stop**.
+
+| Agents do autonomously | Pauses for a human |
+|---|---|
+| Read wearable summary; compare vs personal baseline | Suggesting medical escalation — approval card with evidence |
+| Initiate routine check-ins and follow-ups | Contacting family on the elder's behalf — she consents first |
+| Structured symptom triage and record-keeping | Sharing the elder's reply with the family circle — logged authorization |
+| Meal understanding + one practical suggestion | Third-party data sharing, care-plan changes |
+| Family summaries, alerts, audit entries | Emergency response — staged notifications, human acknowledgement, never auto-dial |
+
+## 🚀 Quick start
+
+Requires Node.js ≥ 22.13.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Use any available local port. The parent and family experiences run from the same server and deployment.
-
-Create an ignored `.env.local` before testing meal analysis:
+Parent and family experiences run from the same server. Optional — for live meal vision and voice transcription, create an ignored `.env.local`:
 
 ```text
 OPENAI_API_KEY=your-key
@@ -47,11 +97,42 @@ OPENAI_API_KEY=your-key
 OPENAI_MODEL=gpt-5.6-terra
 ```
 
-## Validation
+No key? Everything else is deterministic and works offline — the demo never depends on a model to stay safe.
+
+## ✅ Validation
 
 ```bash
 npm run lint
-npm test
+npm test     # production build + server-rendered assertions for both surfaces
 ```
 
-All current health signals, calls, and care actions are deterministic product-demo fixtures. No real caregiver, clinic, or emergency service is contacted.
+## 🧠 How it's built
+
+- **Stack**: Next.js 16 (App Router) · React 19 · TypeScript · Tailwind 4, running through **vinext on Cloudflare Workers**.
+- **AI, scoped deliberately**: OpenAI Responses API (vision) for meal photos and OpenAI STT for voice — both server-side, keys never reach the browser, both optional at runtime. Everything consequential — branching, escalation stages, gating — is deterministic code.
+- **Build transparency**: built by one person directing coding agents in a single event day. Commit-by-commit timeline with original timestamps: [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
+
+## 📚 Documentation
+
+| Doc | Contents |
+|---|---|
+| [docs/PRD_KinKeep_OPC.md](docs/PRD_KinKeep_OPC.md) | As-built product spec, sovereignty model, judge demo path, OPC business story, roadmap |
+| [docs/BUILD_LOG.md](docs/BUILD_LOG.md) | Verifiable event-window build timeline and validation record |
+| [docs/PITCH_DECK.md](docs/PITCH_DECK.md) | Pitch deck content and speaker notes |
+| [docs/SUBMISSION_OpenArena.md](docs/SUBMISSION_OpenArena.md) | Submission form draft |
+
+## 🗺️ Roadmap
+
+Real mobile push & notification ladder → real wearable ingestion (HealthKit / rings) → dialect voice (Cantonese · Hokkien · Teochew · Tamil) validated with real elders → Singapore hawker-food nutrition depth → **Care Provider Console**: one care professional, supported by agents, coordinating wellness for dozens of seniors.
+
+---
+
+<div align="center">
+
+**BUIDL_QUESTS 2026 · OPC / Super Individuals**
+
+_Synthetic demo data · Non-diagnostic · Consent-first · Humans decide high-impact actions_
+
+**KinKeep** — *notices the change, checks in first, tells you when you're needed.*
+
+</div>
