@@ -44,3 +44,8 @@ next-env.d.ts
 
 # local evaluation photos (unverified provenance and may contain EXIF/GPS data)
 /test-images/
+
+# internal planning docs (kept local; only the build log is published)
+/docs/PRD_KinKeep_OPC.md
+/docs/PITCH_DECK.md
+/docs/SUBMISSION_OpenArena.md

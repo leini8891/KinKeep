@@ -114,12 +114,7 @@ npm test     # production build + server-rendered assertions for both surfaces
 
 ## 📚 Documentation
 
-| Doc | Contents |
-|---|---|
-| [docs/PRD_KinKeep_OPC.md](docs/PRD_KinKeep_OPC.md) | As-built product spec, sovereignty model, judge demo path, OPC business story, roadmap |
-| [docs/BUILD_LOG.md](docs/BUILD_LOG.md) | Verifiable event-window build timeline and validation record |
-| [docs/PITCH_DECK.md](docs/PITCH_DECK.md) | Pitch deck content and speaker notes |
-| [docs/SUBMISSION_OpenArena.md](docs/SUBMISSION_OpenArena.md) | Submission form draft |
+The event build timeline and validation evidence are recorded in [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
 
 ## 🗺️ Roadmap
 
