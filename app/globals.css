@@ -445,6 +445,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(49,106,92,.2
 }
 .family-sidebar nav button:hover { background: rgba(255, 253, 248, .72); color: var(--ink); }
 .family-sidebar nav button.selected { background: var(--ink); color: #fff; box-shadow: 0 6px 16px rgba(24, 55, 48, .14); }
+.family-sidebar-count {
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f7e8c9;
+  color: #825319;
+  font-size: 11px;
+  font-weight: 800;
+}
+.family-sidebar nav button.selected .family-sidebar-count { background: rgba(255,255,255,.18); color: #fff; }
 
 .family-household {
   display: grid;
@@ -469,6 +482,30 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(49,106,92,.2
 .family-page-header > div:first-child { display: grid; gap: 5px; }
 .family-page-header p { font-size: 14px; }
 
+.family-priority-alert {
+  width: 100%;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #e8a08d;
+  border-radius: 18px;
+  padding: 13px 16px;
+  background: linear-gradient(135deg, #fff8f3, #fff2e9);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: 0 10px 26px rgba(151, 77, 52, .08);
+  cursor: pointer;
+}
+.family-priority-alert:hover { border-color: #d98369; transform: translateY(-1px); }
+.family-priority-alert.acknowledged { border-color: #b8d0c2; background: var(--sage-pale); }
+.family-priority-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: #f8dfac; color: #9d4d2f; }
+.family-priority-copy { min-width: 0; display: grid; gap: 2px; }
+.family-priority-copy small { color: #a45c3e; font-weight: 800; }
+.family-priority-copy strong { font-size: 16px; }
+.family-priority-copy em { overflow: hidden; color: var(--ink-soft); font-size: 12px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+
 .family-panel {
   min-width: 0;
   display: grid;
@@ -480,6 +517,61 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(49,106,92,.2
   background: rgba(255, 253, 248, .78);
   box-shadow: 0 8px 24px rgba(70, 65, 53, .055);
 }
+
+.family-health-overview > .family-between > div { display: grid; gap: 3px; }
+.family-health-overview > .family-between > span { color: var(--ink-soft); font-size: 12px; }
+.family-health-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.family-health-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid #cadbd1;
+  border-radius: 17px;
+  padding: 16px;
+  background: linear-gradient(145deg, #fbfdfb, #edf5ef);
+  color: var(--ink);
+  text-align: left;
+}
+button.family-health-card { cursor: pointer; }
+button.family-health-card:hover { border-color: var(--sage); transform: translateY(-1px); }
+.family-health-card.attention { border-color: #e7c98d; background: linear-gradient(145deg, #fffdf8, #faf0dc); }
+.family-health-card-heading { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.family-health-card-heading > span:nth-child(2) { min-width: 0; display: grid; gap: 3px; }
+.family-health-card-heading small { overflow: hidden; color: var(--ink-soft); text-overflow: ellipsis; white-space: nowrap; }
+.family-health-answer { display: grid; gap: 4px; }
+.family-health-answer > strong { font-size: 18px; }
+.family-health-answer > small { min-height: 38px; color: var(--ink-soft); line-height: 1.5; }
+.family-health-signals { display: flex; flex-wrap: wrap; gap: 6px; }
+.family-health-signals > span { border-radius: 9px; padding: 6px 8px; background: rgba(255,255,255,.76); color: var(--ink-soft); font-size: 11px; }
+.family-health-link { display: flex; align-items: center; justify-content: space-between; padding-top: 11px; border-top: 1px solid rgba(93,117,109,.16); color: var(--sage-deep); font-size: 12px; font-weight: 800; }
+.family-health-link.stable { color: var(--ink-soft); }
+
+.family-collaborator-list { display: grid; }
+.family-collaborator-list > div { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.family-collaborator-list > div:last-child { border-bottom: 0; }
+.family-collaborator-list > div > span:last-child { display: grid; gap: 3px; }
+.family-collaborator-list small { color: var(--ink-soft); }
+
+.family-notification-list { gap: 0; }
+.family-notification-list > .family-between { padding-bottom: 10px; }
+.family-notification-list > .family-between > span { color: var(--ink-soft); font-size: 12px; }
+.family-desktop-notification {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 13px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.family-desktop-notification > span:nth-child(2) { min-width: 0; display: grid; gap: 4px; }
+.family-desktop-notification > span:nth-child(2) small { color: var(--ink-soft); line-height: 1.5; }
+.family-notification-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--sage-pale); color: var(--sage-deep); }
+.family-desktop-notification.attention .family-notification-icon { background: #f7e8c9; color: #825319; }
+.family-desktop-notification time { color: var(--ink-soft); font-size: 12px; }
+.family-desktop-notification > button { min-height: 34px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; background: var(--paper); color: var(--ink); cursor: pointer; }
+.family-desktop-notification > button:disabled { opacity: .58; cursor: default; }
+.family-desktop-notification.resolved { opacity: .76; }
 
 .family-overview-grid,
 .family-story-grid,
@@ -670,6 +762,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(49,106,92,.2
   .family-trend-grid,
   .family-care-grid,
   .family-record-grid { grid-template-columns: 1fr; }
+  .family-health-card-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {

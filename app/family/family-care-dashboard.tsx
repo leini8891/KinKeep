@@ -23,20 +23,18 @@ import {
   UsersRound,
   Utensils,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CareEscalationCard } from "../care-escalation-card";
 import {
-  createCareEscalation,
   ESCALATION_EVENT,
   readCareEscalation,
   saveCareEscalation,
   type CareEscalation,
-  type EscalationStage,
 } from "../care-escalation";
 
 type Language = "zh" | "en";
 type MobileView = "safe" | "alerts" | "approvals" | "family";
-type DesktopView = "overview" | "trends" | "care" | "records";
+type DesktopView = "overview" | "alerts" | "trends" | "care" | "records";
 type MemberId = "mum" | "dad";
 type MetricId = "activity" | "sleep" | "heart" | "routine";
 type Decision = "pending" | "approved" | "declined";
@@ -79,6 +77,18 @@ const members = {
     },
   },
 } as const;
+
+const demoWanderingEscalation: CareEscalation = {
+  id: "care-demo-wandering",
+  kind: "wandering",
+  stage: "primary_multichannel",
+  reasonZh: "离开安全区域后未回应，可能迷路",
+  reasonEn: "Left the safe zone and did not respond; may be lost",
+  startedAt: "2026-07-12T08:24:00+08:00",
+  lastLocation: "Toa Payoh MRT Exit B",
+  heartRate: 95,
+  deviceBattery: 85,
+};
 
 const metrics = {
   activity: {
@@ -217,14 +227,14 @@ export function FamilyCareDashboard() {
   const [decision, setDecision] = useState<Decision>("pending");
   const [alertRead, setAlertRead] = useState(false);
   const [calling, setCalling] = useState(false);
-  const [escalation, setEscalation] = useState<CareEscalation | null>(null);
-  const escalationTimersRef = useRef<number[]>([]);
+  const [escalation, setEscalation] = useState<CareEscalation>(demoWanderingEscalation);
   const t = (zh: string, en: string) => text(language, zh, en);
   const selectedMember = members[member][language];
   const callLabel = calling ? t("正在拨打妈妈…", "Calling Mum…") : t("联系妈妈", "Call Mum");
   const selectedCallLabel = calling
     ? t(`正在拨打${selectedMember.name}…`, `Calling ${selectedMember.name}…`)
     : t(`联系${selectedMember.name}`, `Call ${selectedMember.name}`);
+  const openAlertCount = (escalation.stage === "backup_acknowledged" ? 0 : 1) + (alertRead ? 0 : 1);
 
   const callMum = () => {
     setCalling(true);
@@ -232,42 +242,20 @@ export function FamilyCareDashboard() {
   };
 
   useEffect(() => {
-    const syncEscalation = () => setEscalation(readCareEscalation());
+    const syncEscalation = () => setEscalation(readCareEscalation() ?? demoWanderingEscalation);
     syncEscalation();
     window.addEventListener("storage", syncEscalation);
     window.addEventListener(ESCALATION_EVENT, syncEscalation);
     return () => {
       window.removeEventListener("storage", syncEscalation);
       window.removeEventListener(ESCALATION_EVENT, syncEscalation);
-      escalationTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     };
   }, []);
 
-  const updateEscalation = (event: CareEscalation, stage: EscalationStage) => {
-    const updated = { ...event, stage };
+  const acknowledgeEscalation = () => {
+    const updated: CareEscalation = { ...escalation, stage: "backup_acknowledged" };
     setEscalation(updated);
     saveCareEscalation(updated);
-  };
-
-  const startWanderingDemo = () => {
-    escalationTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    const event = createCareEscalation("wandering", {
-      lastLocation: "Toa Payoh MRT Exit B",
-      heartRate: 95,
-      deviceBattery: 85,
-    });
-    setEscalation(event);
-    saveCareEscalation(event);
-    setMobileView("alerts");
-    setDesktopView("overview");
-    escalationTimersRef.current = [
-      window.setTimeout(() => updateEscalation(event, "primary_multichannel"), 1200),
-    ];
-  };
-
-  const acknowledgeEscalation = () => {
-    if (!escalation) return;
-    updateEscalation(escalation, "backup_acknowledged");
   };
 
   return (
@@ -345,8 +333,8 @@ export function FamilyCareDashboard() {
 
           {mobileView === "alerts" && (
             <section className="family-mobile-section family-stack">
-              <div className="family-between"><div><h1>{t("即时通知", "Alerts")}</h1><p>{t("只推送真正需要你知道的变化", "Only meaningful changes that need your attention")}</p></div><button className="family-button demo-trigger" onClick={startWanderingDemo}><ShieldAlert size={17} />{t("演示走失事件", "Demo wandering")}</button></div>
-              {escalation && <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />}
+              <div><h1>{t("即时通知", "Alerts")}</h1><p>{t("按紧急程度集中显示需要你知道的变化", "Meaningful changes are grouped here by urgency")}</p></div>
+              <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />
               <article className={`family-alert ${alertRead ? "resolved" : ""}`}>
                 <div className="family-between"><strong>{t("妈妈今早偏离个人基线", "Mum is outside her morning baseline")}</strong><small>08:18</small></div>
                 <p>{t("多信号同时变化，助手已完成第一轮问候。妈妈回复膝盖有点痛，没有报告头晕或胸闷。", "Several signals changed together. The companion completed a first check-in; Mum reported mild knee pain and no dizziness or chest tightness.")}</p>
@@ -380,7 +368,7 @@ export function FamilyCareDashboard() {
 
         <nav className="family-mobile-nav" aria-label={t("家属端功能", "Family app navigation")}>
           <button className={mobileView === "safe" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("safe"); }} aria-pressed={mobileView === "safe"}><Home size={19} />{t("首页", "Home")}</button>
-          <button className={mobileView === "alerts" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("alerts"); }} aria-pressed={mobileView === "alerts"}><span className="family-nav-icon"><Bell size={19} /><em>1</em></span>{t("通知", "Alerts")}</button>
+          <button className={mobileView === "alerts" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("alerts"); }} aria-pressed={mobileView === "alerts"}><span className="family-nav-icon"><Bell size={19} />{openAlertCount > 0 && <em>{openAlertCount}</em>}</span>{t("通知", "Alerts")}</button>
           <button className={mobileView === "approvals" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("approvals"); }} aria-pressed={mobileView === "approvals"}><span className="family-nav-icon"><ShieldCheck size={19} /><em>1</em></span>{t("待批准", "Approvals")}</button>
           <button className={mobileView === "family" ? "selected" : ""} onClick={() => { setProfilePickerOpen(false); setMobileView("family"); }} aria-pressed={mobileView === "family"}><UsersRound size={19} />{t("家庭", "Family")}</button>
         </nav>
@@ -392,6 +380,7 @@ export function FamilyCareDashboard() {
           <LanguageSwitch language={language} onChange={setLanguage} />
           <nav aria-label={t("家属端页面", "Family views")}>
             <button className={desktopView === "overview" ? "selected" : ""} onClick={() => setDesktopView("overview")} aria-pressed={desktopView === "overview"}><LayoutDashboard size={18} />{t("家庭总览", "Family overview")}</button>
+            <button className={desktopView === "alerts" ? "selected" : ""} onClick={() => setDesktopView("alerts")} aria-pressed={desktopView === "alerts"}><Bell size={18} />{t("通知中心", "Notifications")}{openAlertCount > 0 && <span className="family-sidebar-count">{openAlertCount}</span>}</button>
             <button className={desktopView === "trends" ? "selected" : ""} onClick={() => setDesktopView("trends")} aria-pressed={desktopView === "trends"}><ChartNoAxesCombined size={18} />{t("趋势与证据", "Trends & evidence")}</button>
             <button className={desktopView === "care" ? "selected" : ""} onClick={() => setDesktopView("care")} aria-pressed={desktopView === "care"}><CalendarDays size={18} />{t("照护日程", "Care schedule")}</button>
             <button className={desktopView === "records" ? "selected" : ""} onClick={() => setDesktopView("records")} aria-pressed={desktopView === "records"}><ShieldCheck size={18} />{t("操作与权限", "Activity & access")}</button>
@@ -403,21 +392,63 @@ export function FamilyCareDashboard() {
         <div className="family-desktop-main">
           {desktopView === "overview" && (
             <>
-              <header className="family-page-header"><div><h1>{t("家庭总览", "Family overview")}</h1><p>{t("今天 08:30 · 一眼看清谁安好、谁需要你", "Today, 08:30 · See who is okay and who needs you")}</p></div><div className="family-actions"><button className="family-button demo-trigger" onClick={startWanderingDemo}><ShieldAlert size={17} />{t("演示走失事件", "Demo wandering")}</button><button className="family-button" onClick={() => setDesktopView("care")}><CalendarDays size={17} />{t("查看本周日程", "View this week")}</button></div></header>
-              {escalation && <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />}
+              <header className="family-page-header"><div><h1>{t("家庭总览", "Family overview")}</h1><p>{t("今天 08:30 · 先看家人是否安好，再处理需要你的事", "Today, 08:30 · Check everyone's wellbeing, then act where needed")}</p></div><button className="family-button" onClick={() => setDesktopView("care")}><CalendarDays size={17} />{t("查看本周日程", "View this week")}</button></header>
+
+              <button className={`family-priority-alert ${escalation.stage === "backup_acknowledged" ? "acknowledged" : ""}`} onClick={() => setDesktopView("alerts")}>
+                <span className="family-priority-icon"><ShieldAlert size={20} /></span>
+                <span className="family-priority-copy"><small>{t("最高优先级通知 · 08:24", "Highest-priority alert · 08:24")}</small><strong>{escalation.kind === "wandering" ? t("妈妈可能迷路，家属联络正在进行", "Mum may be lost; family contact is in progress") : escalation.kind === "urgent" ? t("妈妈请求紧急帮助，正在联系家属", "Mum requested urgent help; family contact is in progress") : t("妈妈持续不舒服，正在联系家属", "Mum still feels unwell; family contact is in progress")}</strong><em>{escalation.kind === "wandering" ? t("安全区外 14 分钟 · App、短信和电话已通知家属", "Outside safe zone for 14 min · family notified by app, SMS, and phone") : t("App、短信和电话已通知家属", "Family notified by app, SMS, and phone")}</em></span>
+                <span className="family-badge warning">{escalation.stage === "backup_acknowledged" ? t("已接手", "Accepted") : t("进行中", "Live")}</span>
+                <ChevronRight size={19} />
+              </button>
+
+              <section className="family-panel family-health-overview">
+                <div className="family-between"><div><h2>{t("家人健康概览", "Family health overview")}</h2><p>{t("只展示已连接健康数据的档案", "Only profiles with connected health data")}</p></div><span>{t("2 个健康档案", "2 health profiles")}</span></div>
+                <div className="family-health-card-grid">
+                  <button className="family-health-card attention" onClick={() => setDesktopView("trends")}>
+                    <span className="family-health-card-heading"><span className="family-avatar attention">陈</span><span><strong>{t("妈妈 · 陈阿姨", "Mum · Mdm Tan")}</strong><small>{t("已回复 · 在家 · 08:16 更新", "Replied · at home · updated 08:16")}</small></span><span className="family-badge attention">{t("需要留意", "Needs attention")}</span></span>
+                    <span className="family-health-answer"><strong>{t("现在基本安好", "Appears okay right now")}</strong><small>{t("今早规律有变化，已回复膝盖有点痛，暂无紧急健康信号。", "Her morning pattern changed. She reported mild knee pain; no urgent health signals.")}</small></span>
+                    <span className="family-health-signals"><span>{t("睡眠 −2h 08m", "Sleep −2h 08m")}</span><span>{t("活动 −87%", "Activity −87%")}</span><span>{t("静息心率 +11", "Resting HR +11")}</span></span>
+                    <span className="family-health-link">{t("查看健康趋势与依据", "View health trends and evidence")}<ChevronRight size={17} /></span>
+                  </button>
+                  <article className="family-health-card">
+                    <span className="family-health-card-heading"><span className="family-avatar">爸</span><span><strong>{t("爸爸 · 陈叔叔", "Dad · Mr Tan")}</strong><small>{t("晨间散步完成 · 07:52 更新", "Morning walk complete · updated 07:52")}</small></span><span className="family-badge stable">{t("状态稳定", "Stable")}</span></span>
+                    <span className="family-health-answer"><strong>{t("今天一切如常", "Following his usual routine")}</strong><small>{t("活动、静息心率和日常规律都在他的个人基线内。", "Activity, resting heart rate, and routine are within his personal baseline.")}</small></span>
+                    <span className="family-health-signals"><span>{t("散步 2,680 步", "Walk 2,680 steps")}</span><span>{t("静息心率 65", "Resting HR 65")}</span><span>{t("规律正常", "Routine normal")}</span></span>
+                    <span className="family-health-link stable">{t("所有关键指标均在基线内", "All key indicators are within baseline")}<CheckCircle2 size={17} /></span>
+                  </article>
+                </div>
+              </section>
+
               <div className="family-overview-grid">
-                <section className="family-panel"><h2>{t("家庭成员与档案", "Family members & profiles")}</h2><div className="family-member-list">
-                  <button className="family-member-row" onClick={() => setDesktopView("trends")}><span className="family-avatar attention">陈</span><span><strong>{t("妈妈 · 陈阿姨", "Mum · Mdm Tan")}</strong><small>{t("已回复 · 在家 · 08:16 更新", "Replied · at home · updated 08:16")}</small></span><span className="family-badge attention">{t("需要留意", "Needs attention")}</span><ChevronRight size={17} /></button>
-                  <div className="family-member-row"><span className="family-avatar">爸</span><span><strong>{t("爸爸 · 陈叔叔", "Dad · Mr Tan")}</strong><small>{t("晨间散步完成 · 07:52 更新", "Morning walk complete · updated 07:52")}</small></span><span className="family-badge stable">{t("状态稳定", "Stable")}</span></div>
-                  <div className="family-member-row"><span className="family-avatar">E</span><span><strong>{t("自己 · Elena", "Me · Elena")}</strong><small>{t("仅共享照护日程与紧急联系人", "Shares only care schedule and emergency contacts")}</small></span><span className="family-badge private">{t("权限受限", "Limited access")}</span></div>
-                  <div className="family-member-row"><span className="family-avatar">{t("弟", "B")}</span><span><strong>{t("弟弟 · 家属协作者", "Brother · family collaborator")}</strong><small>{t("负责交通、杂货与周末探访", "Helps with transport, groceries, and weekend visits")}</small></span><span className="family-badge stable">{t("照护协作", "Care collaborator")}</span></div>
-                </div></section>
                 <section className="family-panel"><div className="family-between"><h2>{t("今天的家庭任务", "Today's family tasks")}</h2><span>2 / 3</span></div><div className="family-task-list"><div><CheckCircle2 size={18} /><span><strong>{t("爸爸晨间散步", "Dad's morning walk")}</strong><small>{t("07:52 已完成", "Completed at 07:52")}</small></span></div><div><Phone size={18} /><span><strong>{t("联系妈妈", "Call Mum")}</strong><small>{t("Elena · 午餐前", "Elena · before lunch")}</small></span></div><div><Utensils size={18} /><span><strong>{t("爸爸复诊交通", "Transport for Dad's follow-up")}</strong><small>{t("弟弟 · 周四 14:30", "Brother · Thu 14:30")}</small></span></div></div></section>
+                <section className="family-panel"><div className="family-between"><h2>{t("照护协作", "Care team")}</h2><span>{t("2 位家属", "2 family caregivers")}</span></div><div className="family-collaborator-list"><div><span className="family-avatar">E</span><span><strong>Elena</strong><small>{t("主要联系人 · 批准高影响行动", "Primary contact · approves high-impact actions")}</small></span></div><div><span className="family-avatar">{t("弟", "B")}</span><span><strong>{t("弟弟 · David", "Brother · David")}</strong><small>{t("交通、杂货与周末探访", "Transport, groceries, and weekend visits")}</small></span></div></div></section>
               </div>
               <div className="family-story-grid">
                 <section className="family-panel family-story"><span className="family-badge attention">{t("妈妈 · 需要留意", "Mum · needs attention")}</span><h2>{t("不是单一心率报警，而是今早整体规律变了。", "This is not a single heart-rate alert. Her whole morning pattern changed.")}</h2><p>{t("睡眠、活动、静息心率和早餐规律同时偏离个人基线；她已回复并确认在家，因此当前是“需要家人跟进”，不是紧急状态。", "Sleep, activity, resting heart rate, and breakfast routine all moved away from her baseline. She replied and confirmed she is at home, so this needs family follow-up rather than emergency action.")}</p><div className="family-actions"><button className="family-button primary" onClick={() => setDesktopView("trends")}>{t("查看异常证据", "View evidence")}</button><button className="family-button" onClick={callMum}><Phone size={17} />{callLabel}</button></div></section>
                 <section className="family-panel"><div className="family-between"><h2>{t("待批准", "Awaiting approval")}</h2><span className="family-badge warning">1</span></div><p>{t("远程问诊建议已在高影响行动闸门暂停，等待你的决定。", "A telehealth suggestion is paused at the high-impact action gate, waiting for your decision.")}</p><button className="family-button" onClick={() => setDesktopView("records")}>{t("前往处理", "Review action")} <ChevronRight size={17} /></button></section>
               </div>
+            </>
+          )}
+
+          {desktopView === "alerts" && (
+            <>
+              <header className="family-page-header"><div><h1>{t("通知中心", "Notifications")}</h1><p>{t("所有需要家属知道的变化集中在这里，并按紧急程度排序", "Everything the family needs to know, grouped and ordered by urgency")}</p></div>{openAlertCount > 0 && <span className="family-badge warning">{language === "zh" ? `${openAlertCount} 条未处理` : `${openAlertCount} open`}</span>}</header>
+              <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />
+              <section className="family-panel family-notification-list">
+                <div className="family-between"><h2>{t("其他通知", "Other notifications")}</h2><span>{t("今天", "Today")}</span></div>
+                <article className={`family-desktop-notification attention ${alertRead ? "resolved" : ""}`}>
+                  <span className="family-notification-icon"><HeartPulse size={19} /></span>
+                  <span><strong>{t("妈妈今早偏离个人基线", "Mum is outside her morning baseline")}</strong><small>{t("睡眠、活动、静息心率和早餐规律同时变化；她已回复膝盖轻微不适。", "Sleep, activity, resting heart rate, and breakfast routine changed together; she reported mild knee pain.")}</small></span>
+                  <time>08:18</time>
+                  <button onClick={() => setAlertRead(true)} disabled={alertRead}>{alertRead ? t("已读", "Read") : t("标为已读", "Mark read")}</button>
+                </article>
+                <article className="family-desktop-notification resolved">
+                  <span className="family-notification-icon"><Footprints size={19} /></span>
+                  <span><strong>{t("爸爸晨间散步已完成", "Dad completed his morning walk")}</strong><small>{t("活动、心率和日常规律都在个人基线内。", "Activity, heart rate, and routine are within his personal baseline.")}</small></span>
+                  <time>07:52</time>
+                  <span className="family-badge stable">{t("已归档", "Archived")}</span>
+                </article>
+              </section>
             </>
           )}
 

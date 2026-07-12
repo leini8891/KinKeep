@@ -49,13 +49,18 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(html, /高影响行动闸门/);
   assert.match(html, /返回用户端/);
   assert.match(html, /陈家 · 4 位成员/);
-  assert.match(html, /弟弟 · 家属协作者/);
+  assert.match(html, /弟弟 · David/);
+  assert.match(html, /家人健康概览/);
+  assert.match(html, /最高优先级通知/);
+  assert.match(html, /通知中心/);
   assert.match(html, /当前健康档案/);
   assert.match(html, /2 个健康档案 · 2 位家属协作者/);
   assert.match(html, /家属端功能/);
   assert.match(html, />EN<\/button>/);
   assert.match(html, />中文<\/button>/);
   assert.doesNotMatch(html, /妈妈端/);
+  assert.doesNotMatch(html, /演示走失事件/);
+  assert.doesNotMatch(html, /家庭成员与档案/);
 
   const assetNames = await readdir(new URL("../dist/client/assets/", import.meta.url));
   const familyBundleName = assetNames.find((name) => name.startsWith("family-care-dashboard-") && name.endsWith(".js"));
@@ -69,6 +74,10 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(familyBundle, /View all health profiles/);
   assert.match(familyBundle, /2 health profiles · 2 family caregivers/);
   assert.match(familyBundle, /Family app navigation/);
+  assert.match(familyBundle, /Family health overview/);
+  assert.match(familyBundle, /Highest-priority alert/);
+  assert.match(familyBundle, /Other notifications/);
+  assert.doesNotMatch(familyBundle, /Demo wandering/);
 });
 
 test("server-renders the desktop-friendly family mobile preview", async () => {
