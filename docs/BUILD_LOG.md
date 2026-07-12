@@ -13,6 +13,7 @@ This log makes the repository history easier to audit. The Git commits and their
 | 14:17 | [`9a7149c`](https://github.com/leini8891/KinKeep/commit/9a7149c6fb19b15f362d96dab934c9dd71706179) | Initial vinext/OpenAI Sites scaffold, parent-facing bilingual companion, styling, SSR test, README, and working PRD. |
 | 14:53 | [`9f996aa`](https://github.com/leini8891/KinKeep/commit/9f996aa0ae0318c3d51a47ca0cc08ca3e101af4a) | Added the family dashboard, parent/family navigation, meal-analysis route, Singapore meal fixtures, social preview asset, and updated tests. |
 | 15:21 | [`8fc39e2`](https://github.com/leini8891/KinKeep/commit/8fc39e22a90d0e036f6ba191810f1af91867e1c1) | Added bilingual family copy, parent-to-family sync behavior, responsive refinements, configuration fixes, and broader SSR assertions. |
+| 15:45 | [`5cef2e0`](https://github.com/leini8891/KinKeep/commit/5cef2e06146911c8a5aa14f5ffbccd87f99ee543) | Clarified the difference between family members and monitored health profiles, with matching SSR assertions. |
 
 ## Why the initial commit is large
 
