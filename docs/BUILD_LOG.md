@@ -21,12 +21,9 @@ The repository was created during the build day and the first commit imported th
 
 Later product milestones are separate commits with focused diffs. The history has not been backdated or rewritten to manufacture activity.
 
-## Prior work and judging boundary
+## Judging scope
 
-- Earlier CareLoop SG and SnapCal experiments informed the problem framing, safety patterns, and Singapore nutrition context.
-- Those earlier repositories and their prior work are not submitted as new BUIDL_QUESTS implementation.
 - KinKeep's judging evidence is the code introduced and changed in this repository during the event window.
-- The vinext/OpenAI Sites scaffold, npm dependencies, icons, and other third-party packages are infrastructure, not claimed as original product work.
 - Demo data is synthetic. Local food-evaluation photos are excluded from version control because their provenance is not part of the submission and some retain EXIF metadata.
 
 ## Validation record

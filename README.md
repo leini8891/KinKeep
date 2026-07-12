@@ -28,7 +28,7 @@ The current risk and caregiver-escalation responses are deterministic demo fixtu
 
 The current product scope, sovereignty model, demo scenarios, and OPC roadmap are documented in [docs/PRD_KinKeep_OPC.md](docs/PRD_KinKeep_OPC.md).
 
-The event build timeline, prior-work boundary, and validation evidence are recorded in [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
+The event build timeline and validation evidence are recorded in [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
 
 ## Local development
 

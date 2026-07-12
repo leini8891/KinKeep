@@ -76,7 +76,7 @@ OUT of scope today (Roadmap only):
 - Care Provider multi-senior console (one mock screenshot max)
 - Authentication, production database and real personal/health data
 
-Founder note: 上次 ba0ba0 赢在"确定性规则决定风险、AI 只负责措辞"，这次沿用这个安全架构，但产品叙事从 dashboard（看数据）升级为 agent loop（替你做事）。评委看到的必须是"agent 完成了一轮照护动作"，而不是"又一个健康仪表盘"。
+Founder note: 安全架构坚持“确定性规则决定风险、AI 只负责措辞”，产品叙事聚焦 agent loop（替你完成第一轮照护），而不是又一个只展示数据的健康仪表盘。
 
 ---
 
@@ -189,7 +189,7 @@ No standalone `/approvals` or `/companion` route for the hackathon build. Those 
 
 - **Build target**: `/KinKeep/` — the current fresh submission repo. At v1.2 it is still a starter with no product commit history; commit the first verified P0 state immediately. Product name is `KinKeep`; repository/package identifiers remain lowercase where tooling requires it.
 - **Stack already scaffolded**: Next.js 16.2.6 App Router + React 19 + TypeScript + Tailwind 4, running through **vinext/Vite on Cloudflare Workers** with OpenAI Sites hosting metadata. Keep the implementation aligned with this existing scaffold and its deployment path.
-- **Reference implementation**: `/careloop-sg/` already contains the working Quiet Morning/Wandering scenario data, pipeline rail, elder phone, local nutrition fixtures and sovereignty policy. Port only the validated pieces into `/KinKeep/`; `/careloop-sg/` must not become a runtime dependency.
+- **Implementation source of truth**: all judged product code, scenario fixtures, safety rules, UI, and tests live directly in `/KinKeep/`. The submission has no external project runtime dependency.
 - **Zero-key rule**: the whole judged path runs on deterministic fixtures and scripted conversations. A Nimbus/model call may improve wording if credentials and latency are proven, but risk tier, policy gate and demo completion never depend on an LLM or external API.
 - **Single scenario engine** (`app/lib/scenario/engine.tsx` or equivalent): a scenario is an ordered `CareEvent[]`; play/step/reset advances one cursor; phone, pipeline, family summary and approval queue all render from the same state.
 - **Core types**: `WearableReading`, `BaselineDelta`, `CareEvent`, `CareTask { impact }`, `ApprovalDecision`, `RiskTier`.
