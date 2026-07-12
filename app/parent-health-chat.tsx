@@ -249,17 +249,13 @@ const copy = {
 
 let nextMessageId = 10;
 
-function initialMessages(language: Language): Message[] {
-  const t = copy[language];
-  return [
-    { id: 1, role: "watch", tone: "status", watchSync: true },
-    { id: 2, role: "assistant", text: t.hello },
-  ];
+function initialMessages(): Message[] {
+  return [{ id: 1, role: "watch", tone: "status", watchSync: true }];
 }
 
 export function ParentHealthChat() {
   const [language, setLanguage] = useState<Language>("zh");
-  const [messages, setMessages] = useState<Message[]>(() => initialMessages("zh"));
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [step, setStep] = useState<Step>("initial");
   const [draft, setDraft] = useState("");
   const [voiceState, setVoiceState] = useState("");
@@ -275,6 +271,7 @@ export function ParentHealthChat() {
   const voiceTimeoutRef = useRef<number | null>(null);
   const escalationTimersRef = useRef<number[]>([]);
   const t = copy[language];
+  const isWatchSynced = messages.some((message) => message.health);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -324,7 +321,7 @@ export function ParentHealthChat() {
       watchSyncTimerRef.current = null;
     }
     setLanguage(nextLanguage);
-    setMessages(initialMessages(nextLanguage));
+    setMessages(initialMessages());
     setStep("initial");
     setVoiceState("");
   };
@@ -336,13 +333,16 @@ export function ParentHealthChat() {
       ),
     );
     watchSyncTimerRef.current = window.setTimeout(() => {
-      setMessages((current) =>
-        current.map((message) =>
+      setMessages((current) => {
+        const syncedMessages = current.map((message) =>
           message.id === 1
             ? { ...message, watchSync: false, syncing: false, health: true }
             : message,
-        ),
-      );
+        );
+        return syncedMessages.some((message) => message.id === 2)
+          ? syncedMessages
+          : [...syncedMessages, { id: 2, role: "assistant", text: t.hello }];
+      });
       watchSyncTimerRef.current = null;
     }, 900);
   };
@@ -807,7 +807,7 @@ export function ParentHealthChat() {
         <div ref={endRef} />
       </section>
 
-      {quickActions.length > 0 && (
+      {isWatchSynced && quickActions.length > 0 && (
         <div className="quick-actions" aria-label="Suggested replies">
           {quickActions.map((action) => (
             <button key={action.id} className={action.important ? "important" : ""} onClick={() => handleAction(action.id)}>{action.label}</button>
@@ -815,7 +815,7 @@ export function ParentHealthChat() {
         </div>
       )}
 
-      <footer className="chat-controls">
+      {isWatchSynced && <footer className="chat-controls">
         <div className="safety-actions">
           <button className="well-button" onClick={() => handleAction("well")}><Smile size={20} />{t.well}</button>
           <button className="help-button" onClick={() => handleAction("help")}><Siren size={20} />{t.help}</button>
@@ -838,7 +838,7 @@ export function ParentHealthChat() {
         </div>
         <div className={`voice-state ${isListening || isTranscribing ? "active" : ""}`} role="status">{voiceState || t.voiceHint}</div>
         <div className="privacy-note"><CheckCircle2 size={15} />{t.privacy}</div>
-      </footer>
+      </footer>}
     </section>
   );
 }
