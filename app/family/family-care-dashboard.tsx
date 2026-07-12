@@ -300,7 +300,7 @@ export function FamilyCareDashboard() {
           )}
         </div>
 
-        <nav className="family-member-nav" aria-label={t("家庭成员", "Family members")}>
+        <nav className="family-member-nav" aria-label={t("健康档案", "Health profiles")}>
           {(Object.keys(members) as MemberId[]).map((id) => (
             <button key={id} className={member === id ? "selected" : ""} onClick={() => { setMember(id); setMobileView("safe"); }} aria-pressed={member === id}>
               {id === "mum" ? <HeartHandshake size={18} /> : id === "dad" ? <UserRound size={18} /> : <ShieldCheck size={18} />}
@@ -320,7 +320,7 @@ export function FamilyCareDashboard() {
             <button className={desktopView === "care" ? "selected" : ""} onClick={() => setDesktopView("care")} aria-pressed={desktopView === "care"}><CalendarDays size={18} />{t("照护日程", "Care schedule")}</button>
             <button className={desktopView === "records" ? "selected" : ""} onClick={() => setDesktopView("records")} aria-pressed={desktopView === "records"}><ShieldCheck size={18} />{t("操作与权限", "Activity & access")}</button>
           </nav>
-          <div className="family-household"><small>{t("当前家庭", "Current family")}</small><strong>{t("陈家 · 3 位成员", "Tan family · 3 members")}</strong><span>{t("你是主要联系人", "You are the primary contact")}</span></div>
+          <div className="family-household"><small>{t("当前家庭", "Current family")}</small><strong>{t("陈家 · 4 位成员", "Tan family · 4 members")}</strong><span>{t("3 个健康档案 · 2 位家属协作者", "3 health profiles · 2 family caregivers")}</span></div>
           <Link className="family-button" href="/">{t("返回用户端", "Back to user view")}</Link>
         </aside>
 
@@ -329,10 +329,11 @@ export function FamilyCareDashboard() {
             <>
               <header className="family-page-header"><div><h1>{t("家庭总览", "Family overview")}</h1><p>{t("今天 08:30 · 一眼看清谁安好、谁需要你", "Today, 08:30 · See who is okay and who needs you")}</p></div><button className="family-button" onClick={() => setDesktopView("care")}><CalendarDays size={17} />{t("查看本周日程", "View this week")}</button></header>
               <div className="family-overview-grid">
-                <section className="family-panel"><h2>{t("家人状态", "Family status")}</h2><div className="family-member-list">
+                <section className="family-panel"><h2>{t("家庭成员与档案", "Family members & profiles")}</h2><div className="family-member-list">
                   <button className="family-member-row" onClick={() => setDesktopView("trends")}><span className="family-avatar attention">陈</span><span><strong>{t("妈妈 · 陈阿姨", "Mum · Mdm Tan")}</strong><small>{t("已回复 · 在家 · 08:16 更新", "Replied · at home · updated 08:16")}</small></span><span className="family-badge attention">{t("需要留意", "Needs attention")}</span><ChevronRight size={17} /></button>
                   <div className="family-member-row"><span className="family-avatar">爸</span><span><strong>{t("爸爸 · 陈叔叔", "Dad · Mr Tan")}</strong><small>{t("晨间散步完成 · 07:52 更新", "Morning walk complete · updated 07:52")}</small></span><span className="family-badge stable">{t("状态稳定", "Stable")}</span></div>
                   <div className="family-member-row"><span className="family-avatar">E</span><span><strong>{t("自己 · Elena", "Me · Elena")}</strong><small>{t("仅共享照护日程与紧急联系人", "Shares only care schedule and emergency contacts")}</small></span><span className="family-badge private">{t("权限受限", "Limited access")}</span></div>
+                  <div className="family-member-row"><span className="family-avatar">{t("弟", "B")}</span><span><strong>{t("弟弟 · 家属协作者", "Brother · family collaborator")}</strong><small>{t("负责交通、杂货与周末探访", "Helps with transport, groceries, and weekend visits")}</small></span><span className="family-badge stable">{t("照护协作", "Care collaborator")}</span></div>
                 </div></section>
                 <section className="family-panel"><div className="family-between"><h2>{t("今天的家庭任务", "Today's family tasks")}</h2><span>2 / 3</span></div><div className="family-task-list"><div><CheckCircle2 size={18} /><span><strong>{t("爸爸晨间散步", "Dad's morning walk")}</strong><small>{t("07:52 已完成", "Completed at 07:52")}</small></span></div><div><Phone size={18} /><span><strong>{t("联系妈妈", "Call Mum")}</strong><small>{t("Elena · 午餐前", "Elena · before lunch")}</small></span></div><div><Utensils size={18} /><span><strong>{t("爸爸复诊交通", "Transport for Dad's follow-up")}</strong><small>{t("弟弟 · 周四 14:30", "Brother · Thu 14:30")}</small></span></div></div></section>
               </div>
