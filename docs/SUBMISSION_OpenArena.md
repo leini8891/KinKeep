@@ -28,7 +28,7 @@ KinKeep
 
 **项目官网 / 演示地址**
 ```
-[部署后的 Sites/Workers URL — 见文末部署备注]
+https://kinkeep-family-health.leini9591.chatgpt.site/
 ```
 
 **GitHub 仓库**
