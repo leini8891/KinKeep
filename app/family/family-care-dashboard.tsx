@@ -15,12 +15,22 @@ import {
   Moon,
   Phone,
   ShieldCheck,
+  ShieldAlert,
   Sparkles,
   UserRound,
   UsersRound,
   Utensils,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CareEscalationCard } from "../care-escalation-card";
+import {
+  createCareEscalation,
+  ESCALATION_EVENT,
+  readCareEscalation,
+  saveCareEscalation,
+  type CareEscalation,
+  type EscalationStage,
+} from "../care-escalation";
 
 type Language = "zh" | "en";
 type MobileView = "safe" | "alerts" | "approvals";
@@ -222,6 +232,8 @@ export function FamilyCareDashboard() {
   const [decision, setDecision] = useState<Decision>("pending");
   const [alertRead, setAlertRead] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [escalation, setEscalation] = useState<CareEscalation | null>(null);
+  const escalationTimersRef = useRef<number[]>([]);
   const t = (zh: string, en: string) => text(language, zh, en);
   const selectedMember = members[member][language];
   const callLabel = calling ? t("正在拨打妈妈…", "Calling Mum…") : t("联系妈妈", "Call Mum");
@@ -229,6 +241,45 @@ export function FamilyCareDashboard() {
   const callMum = () => {
     setCalling(true);
     window.setTimeout(() => setCalling(false), 1400);
+  };
+
+  useEffect(() => {
+    const syncEscalation = () => setEscalation(readCareEscalation());
+    syncEscalation();
+    window.addEventListener("storage", syncEscalation);
+    window.addEventListener(ESCALATION_EVENT, syncEscalation);
+    return () => {
+      window.removeEventListener("storage", syncEscalation);
+      window.removeEventListener(ESCALATION_EVENT, syncEscalation);
+      escalationTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, []);
+
+  const updateEscalation = (event: CareEscalation, stage: EscalationStage) => {
+    const updated = { ...event, stage };
+    setEscalation(updated);
+    saveCareEscalation(updated);
+  };
+
+  const startWanderingDemo = () => {
+    escalationTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    const event = createCareEscalation("wandering", {
+      lastLocation: "Toa Payoh MRT Exit B",
+      heartRate: 95,
+      deviceBattery: 85,
+    });
+    setEscalation(event);
+    saveCareEscalation(event);
+    setMobileView("alerts");
+    setDesktopView("overview");
+    escalationTimersRef.current = [
+      window.setTimeout(() => updateEscalation(event, "primary_multichannel"), 1200),
+    ];
+  };
+
+  const acknowledgeEscalation = () => {
+    if (!escalation) return;
+    updateEscalation(escalation, "backup_acknowledged");
   };
 
   return (
@@ -281,7 +332,8 @@ export function FamilyCareDashboard() {
 
           {mobileView === "alerts" && (
             <section className="family-mobile-section family-stack">
-              <div className="family-between"><div><h1>{t("即时通知", "Alerts")}</h1><p>{t("只推送真正需要你知道的变化", "Only meaningful changes that need your attention")}</p></div><span className="family-badge warning">{alertRead ? t("已处理", "Handled") : t("1 未处理", "1 new")}</span></div>
+              <div className="family-between"><div><h1>{t("即时通知", "Alerts")}</h1><p>{t("只推送真正需要你知道的变化", "Only meaningful changes that need your attention")}</p></div><button className="family-button demo-trigger" onClick={startWanderingDemo}><ShieldAlert size={17} />{t("演示走失事件", "Demo wandering")}</button></div>
+              {escalation && <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />}
               <article className={`family-alert ${alertRead ? "resolved" : ""}`}>
                 <div className="family-between"><strong>{t("妈妈今早偏离个人基线", "Mum is outside her morning baseline")}</strong><small>08:18</small></div>
                 <p>{t("多信号同时变化，助手已完成第一轮问候。妈妈回复膝盖有点痛，没有报告头晕或胸闷。", "Several signals changed together. The companion completed a first check-in; Mum reported mild knee pain and no dizziness or chest tightness.")}</p>
@@ -327,7 +379,8 @@ export function FamilyCareDashboard() {
         <div className="family-desktop-main">
           {desktopView === "overview" && (
             <>
-              <header className="family-page-header"><div><h1>{t("家庭总览", "Family overview")}</h1><p>{t("今天 08:30 · 一眼看清谁安好、谁需要你", "Today, 08:30 · See who is okay and who needs you")}</p></div><button className="family-button" onClick={() => setDesktopView("care")}><CalendarDays size={17} />{t("查看本周日程", "View this week")}</button></header>
+              <header className="family-page-header"><div><h1>{t("家庭总览", "Family overview")}</h1><p>{t("今天 08:30 · 一眼看清谁安好、谁需要你", "Today, 08:30 · See who is okay and who needs you")}</p></div><div className="family-actions"><button className="family-button demo-trigger" onClick={startWanderingDemo}><ShieldAlert size={17} />{t("演示走失事件", "Demo wandering")}</button><button className="family-button" onClick={() => setDesktopView("care")}><CalendarDays size={17} />{t("查看本周日程", "View this week")}</button></div></header>
+              {escalation && <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />}
               <div className="family-overview-grid">
                 <section className="family-panel"><h2>{t("家庭成员与档案", "Family members & profiles")}</h2><div className="family-member-list">
                   <button className="family-member-row" onClick={() => setDesktopView("trends")}><span className="family-avatar attention">陈</span><span><strong>{t("妈妈 · 陈阿姨", "Mum · Mdm Tan")}</strong><small>{t("已回复 · 在家 · 08:16 更新", "Replied · at home · updated 08:16")}</small></span><span className="family-badge attention">{t("需要留意", "Needs attention")}</span><ChevronRight size={17} /></button>

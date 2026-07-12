@@ -29,6 +29,7 @@ test("server-renders the KinKeep parent companion", async () => {
   assert.match(html, /用户端/);
   assert.match(html, /家属端/);
   assert.doesNotMatch(html, /妈妈端/);
+  assert.match(html, /点麦克风说话；录音仅用于本次转写/);
   assert.match(html, /需要帮助/);
   assert.match(html, /href="\/family"/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
