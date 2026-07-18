@@ -1,3 +1,5 @@
+import { morningHealthFixture } from "../../demo-health-data";
+
 type OpenAIResponse = {
   output_text?: string;
   output?: Array<{
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
     .join("\n");
 
   const healthContext = body.healthSynced
-    ? "Apple Watch summary: sleep 6h12m (about 1 hour below personal baseline), resting heart rate 72 bpm and stable, 320 steps (lower than usual this morning). Recent history includes occasional knee discomfort. Breakfast is not yet confirmed."
+    ? `Apple Watch summary: sleep ${morningHealthFixture.sleep.value} (${morningHealthFixture.sleep.deltaEn} below personal baseline), resting heart rate ${morningHealthFixture.restingHeartRate.value} bpm (${morningHealthFixture.restingHeartRate.delta} bpm above baseline), ${morningHealthFixture.steps.value} steps (${morningHealthFixture.steps.deltaPercent}% below the usual morning level). Recent history includes occasional knee discomfort. Breakfast is not yet confirmed.`
     : "Apple Watch data has not been synced. Do not claim to know sleep, heart rate, steps, or other wearable facts.";
 
   const systemPrompt = `You are KinKeep's warm companion for an older adult in Singapore.

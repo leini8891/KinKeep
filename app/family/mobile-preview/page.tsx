@@ -32,7 +32,7 @@ export default function FamilyMobilePreviewPage() {
         <aside className="family-preview-note">
           <strong>这个链接只用于演示</strong>
           <p>正式家属端仍然使用同一个地址，并根据手机或电脑屏幕自动显示对应界面。</p>
-          <p>演示时建议先打开 PC 版，再用此页讲解健康档案选择器、通知和家庭分工。</p>
+          <p>演示时建议先打开 PC 版，再用此页讲解“今日跟进”的证据、三个方案、任务和复查结果。</p>
           <small>This preview keeps the live mobile interactions inside a 390 px viewport.</small>
         </aside>
       </section>

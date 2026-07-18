@@ -34,6 +34,19 @@ test("server-renders the KinKeep parent companion", async () => {
   assert.doesNotMatch(html, /昨晚睡得比平时少一些/);
   assert.match(html, /href="\/family"/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
+
+  const assetNames = await readdir(new URL("../dist/client/assets/", import.meta.url));
+  const parentBundleName = assetNames.find((name) => name.startsWith("parent-health-chat-") && name.endsWith(".js"));
+  assert.ok(parentBundleName, "parent client bundle should be emitted");
+  const parentBundle = await readFile(new URL(`../dist/client/assets/${parentBundleName}`, import.meta.url), "utf8");
+  assert.match(parentBundle, /没有这些情况/);
+  assert.match(parentBundle, /None of those/);
+
+  const sharedCareBundleName = assetNames.find((name) => name.startsWith("care-episode-") && name.endsWith(".js"));
+  assert.ok(sharedCareBundleName, "shared care data bundle should be emitted");
+  const sharedCareBundle = await readFile(new URL(`../dist/client/assets/${sharedCareBundleName}`, import.meta.url), "utf8");
+  assert.match(sharedCareBundle, /5h 12m/);
+  assert.doesNotMatch(sharedCareBundle, /6h 12m|72 bpm/);
 });
 
 test("server-renders the responsive KinKeep family experience", async () => {
@@ -42,23 +55,26 @@ test("server-renders the responsive KinKeep family experience", async () => {
 
   const html = await response.text();
   assert.match(html, /家庭总览/);
+  assert.match(html, /今日跟进/);
   assert.match(html, /趋势与证据/);
   assert.match(html, /照护日程/);
-  assert.match(html, /待批准/);
   assert.match(html, /不是单一心率报警/);
-  assert.match(html, /高影响行动闸门/);
+  assert.match(html, /三个跟进方案/);
   assert.match(html, /返回用户端/);
   assert.match(html, /陈家 · 4 位成员/);
   assert.match(html, /弟弟 · David/);
   assert.match(html, /家人健康概览/);
-  assert.match(html, /最高优先级通知/);
+  assert.match(html, /其他智能监测场景/);
+  assert.match(html, /体验走失监测/);
   assert.match(html, /通知中心/);
   assert.match(html, /当前健康档案/);
   assert.match(html, /2 个健康档案 · 2 位家属协作者/);
   assert.match(html, /家属端功能/);
+  assert.match(html, /5h 12m/);
   assert.match(html, />EN<\/button>/);
   assert.match(html, />中文<\/button>/);
   assert.doesNotMatch(html, /妈妈端/);
+  assert.doesNotMatch(html, /最高优先级通知/);
   assert.doesNotMatch(html, /演示走失事件/);
   assert.doesNotMatch(html, /家庭成员与档案/);
 
@@ -67,7 +83,8 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.ok(familyBundleName, "family client bundle should be emitted");
   const familyBundle = await readFile(new URL(`../dist/client/assets/${familyBundleName}`, import.meta.url), "utf8");
   assert.match(familyBundle, /Family overview/);
-  assert.match(familyBundle, /Actions awaiting approval/);
+  assert.match(familyBundle, /Today&apos;s follow-up|Today's follow-up/);
+  assert.match(familyBundle, /Review & act/);
   assert.match(familyBundle, /Back to user view/);
   assert.match(familyBundle, /Brother · family collaborator/);
   assert.match(familyBundle, /Current health profile/);
@@ -75,8 +92,11 @@ test("server-renders the responsive KinKeep family experience", async () => {
   assert.match(familyBundle, /2 health profiles · 2 family caregivers/);
   assert.match(familyBundle, /Family app navigation/);
   assert.match(familyBundle, /Family health overview/);
-  assert.match(familyBundle, /Highest-priority alert/);
+  assert.match(familyBundle, /Another smart monitoring scenario/);
   assert.match(familyBundle, /Other notifications/);
+  assert.match(familyBundle, /breathing difficulty/);
+  assert.doesNotMatch(familyBundle, /6h 12m|72 bpm/);
+  assert.doesNotMatch(familyBundle, /Highest-priority alert/);
   assert.doesNotMatch(familyBundle, /Demo wandering/);
 });
 

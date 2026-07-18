@@ -24,6 +24,9 @@ import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { NutritionAnalysis } from "./nutrition";
 import { CareEscalationCard } from "./care-escalation-card";
+import { createCareEpisode, saveCareEpisode } from "./care-episode";
+import { morningHealthFixture } from "./demo-health-data";
+import { FollowUpConfirmationCard } from "./follow-up-confirmation-card";
 import {
   createCareEscalation,
   saveCareEscalation,
@@ -37,6 +40,7 @@ type Step =
   | "initial"
   | "breakfast"
   | "knee-duration"
+  | "knee-safety"
   | "call-choice"
   | "sleep-symptoms"
   | "meal-photo"
@@ -56,8 +60,10 @@ type Message = {
   nutrition?: NutritionAnalysis;
   loading?: boolean;
   replying?: boolean;
+  proactiveThinking?: boolean;
   error?: string;
   escalation?: CareEscalation;
+  followUpConfirmation?: boolean;
 };
 type QuickAction = { id: string; label: string; important?: boolean };
 
@@ -74,9 +80,9 @@ const copy = {
     watchSyncButton: "同步健康数据",
     watchSyncing: "正在同步…",
     healthTitle: "今早健康概览",
-    synced: "07:42 已同步",
-    sleep: "睡眠 · 少 1h",
-    heart: "心率 · 稳定",
+    synced: `${morningHealthFixture.syncedAt} 已同步`,
+    sleep: `睡眠 · 少 ${morningHealthFixture.sleep.deltaZh}`,
+    heart: `静息心率 · 高 ${morningHealthFixture.restingHeartRate.delta} bpm`,
     steps: "步数 · 偏少",
     summary: "没有紧急问题，但今天早上比平时安静。",
     companion: "陪伴助手",
@@ -101,6 +107,9 @@ const copy = {
     todayPain: "今天开始",
     daysPain: "有几天了",
     severe: "比较严重",
+    kneeSafetyAsk: "明白。现在有没有跌倒、胸闷、呼吸困难，或者疼痛突然变得很严重？",
+    kneeSafe: "没有这些情况",
+    kneeDanger: "有，需要帮助",
     painFollow: "我已经记录下来。需要请 Elena 今天给你打电话吗？",
     yesCall: "好的，请联系",
     noCall: "暂时不用",
@@ -153,6 +162,7 @@ const copy = {
     microphoneError: "无法使用麦克风，请允许麦克风权限后重试。",
     voiceError: "没有听清楚，请再说一次。",
     thinking: "陪伴助手正在回复…",
+    proactiveThinking: "陪伴助手正在结合今早数据和近期记录…",
     input: "想说什么都可以…",
     defaultReply: "谢谢你告诉我。还有哪里不舒服，或者需要我提醒什么吗？",
     privacy: "只有经过你同意的更新才会与 Elena 共享",
@@ -172,9 +182,9 @@ const copy = {
     watchSyncButton: "Sync health data",
     watchSyncing: "Syncing…",
     healthTitle: "Morning health overview",
-    synced: "Synced 07:42",
-    sleep: "Sleep · 1h less",
-    heart: "Heart rate · steady",
+    synced: `Synced ${morningHealthFixture.syncedAt}`,
+    sleep: `Sleep · ${morningHealthFixture.sleep.deltaEn} less`,
+    heart: `Resting HR · ${morningHealthFixture.restingHeartRate.delta} bpm higher`,
     steps: "Steps · lower",
     summary: "Nothing urgent, but your morning is quieter than usual.",
     companion: "Companion",
@@ -199,6 +209,9 @@ const copy = {
     todayPain: "Started today",
     daysPain: "A few days",
     severe: "Quite severe",
+    kneeSafetyAsk: "Understood. Have you fallen, felt chest tightness or shortness of breath, or has the pain suddenly become severe?",
+    kneeSafe: "None of those",
+    kneeDanger: "Yes, I need help",
     painFollow: "I’ve noted it. Would you like Elena to call you today?",
     yesCall: "Yes, please",
     noCall: "Not yet",
@@ -251,6 +264,7 @@ const copy = {
     microphoneError: "The microphone is unavailable. Allow microphone access and try again.",
     voiceError: "I did not catch that. Please try again.",
     thinking: "Companion is replying…",
+    proactiveThinking: "Companion is reviewing this morning’s data and recent history…",
     input: "You can tell me anything…",
     defaultReply: "Thank you for telling me. Is anything else uncomfortable, or is there something you want me to remind you about?",
     privacy: "Only the updates you approve are shared with Elena",
@@ -284,7 +298,7 @@ export function ParentHealthChat() {
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
-  const watchSyncTimerRef = useRef<number | null>(null);
+  const watchSyncTimersRef = useRef<number[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -292,6 +306,9 @@ export function ParentHealthChat() {
   const escalationTimersRef = useRef<number[]>([]);
   const t = copy[language];
   const isWatchSynced = messages.some((message) => message.health);
+  const isProactiveQuestionReady = messages.some(
+    (message) => message.id === 2 && Boolean(message.text),
+  );
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -302,7 +319,7 @@ export function ParentHealthChat() {
     const escalationTimers = escalationTimersRef.current;
     return () => {
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
-      if (watchSyncTimerRef.current !== null) window.clearTimeout(watchSyncTimerRef.current);
+      watchSyncTimersRef.current.forEach((timer) => window.clearTimeout(timer));
       if (voiceTimeoutRef.current !== null) window.clearTimeout(voiceTimeoutRef.current);
       escalationTimers.forEach((timer) => window.clearTimeout(timer));
       if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
@@ -336,10 +353,8 @@ export function ParentHealthChat() {
   };
 
   const resetConversation = (nextLanguage: Language) => {
-    if (watchSyncTimerRef.current !== null) {
-      window.clearTimeout(watchSyncTimerRef.current);
-      watchSyncTimerRef.current = null;
-    }
+    watchSyncTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    watchSyncTimersRef.current = [];
     setLanguage(nextLanguage);
     setMessages(initialMessages());
     setStep("initial");
@@ -352,24 +367,58 @@ export function ParentHealthChat() {
         message.id === 1 ? { ...message, syncing: true } : message,
       ),
     );
-    watchSyncTimerRef.current = window.setTimeout(() => {
-      setMessages((current) => {
-        const syncedMessages = current.map((message) =>
+    const showHealthSummary = window.setTimeout(() => {
+      setMessages((current) =>
+        current.map((message) =>
           message.id === 1
             ? { ...message, watchSync: false, syncing: false, health: true }
             : message,
-        );
-        return syncedMessages.some((message) => message.id === 2)
-          ? syncedMessages
-          : [...syncedMessages, { id: 2, role: "assistant", text: t.hello }];
+        ),
+      );
+    }, 700);
+    const showAssistantThinking = window.setTimeout(() => {
+      setMessages((current) =>
+        current.some((message) => message.id === 2)
+          ? current
+          : [
+              ...current,
+              {
+                id: 2,
+                role: "assistant",
+                tone: "status",
+                replying: true,
+                proactiveThinking: true,
+              },
+            ],
+      );
+    }, 1200);
+    const showProactiveQuestion = window.setTimeout(() => {
+      setMessages((current) => {
+        const assistantQuestion: Message = {
+          id: 2,
+          role: "assistant",
+          text: t.hello,
+        };
+        return current.some((message) => message.id === 2)
+          ? current.map((message) => (message.id === 2 ? assistantQuestion : message))
+          : [...current, assistantQuestion];
       });
-      watchSyncTimerRef.current = null;
-    }, 900);
+      watchSyncTimersRef.current = [];
+    }, 2800);
+    watchSyncTimersRef.current = [
+      showHealthSummary,
+      showAssistantThinking,
+      showProactiveQuestion,
+    ];
   };
 
   const finishCallChoice = (notify: boolean) => {
     addMessage({ role: "user", text: notify ? t.yesCall : t.noCall });
-    if (notify) startEscalation("symptom");
+    if (notify) {
+      const episode = createCareEpisode();
+      saveCareEpisode(episode);
+      addMessage({ role: "assistant", tone: "status", followUpConfirmation: true });
+    }
     else addMessage({ role: "assistant", text: t.noteDone });
     setStep("done");
   };
@@ -395,8 +444,27 @@ export function ParentHealthChat() {
     }
     if (action === "today-pain" || action === "days-pain") {
       addMessage({ role: "user", text: action === "today-pain" ? t.todayPain : t.daysPain });
+      addMessage({ role: "assistant", text: t.kneeSafetyAsk });
+      setStep("knee-safety");
+      return;
+    }
+    if (action === "knee-safe") {
+      addMessage({ role: "user", text: t.kneeSafe });
       addMessage({ role: "assistant", text: t.painFollow });
       setStep("call-choice");
+      return;
+    }
+    if (action === "knee-danger") {
+      addMessage({ role: "user", text: t.kneeDanger });
+      addMessage({
+        role: "assistant",
+        tone: "alert",
+        text: language === "zh"
+          ? "请先坐在安全的地方。照护升级已启动。"
+          : "Please sit somewhere safe. Care escalation has started.",
+      });
+      startEscalation("urgent");
+      setStep("done");
       return;
     }
     if (action === "severe") {
@@ -493,6 +561,11 @@ export function ParentHealthChat() {
           { id: "today-pain", label: t.todayPain },
           { id: "days-pain", label: t.daysPain },
           { id: "severe", label: t.severe, important: true },
+        ];
+      case "knee-safety":
+        return [
+          { id: "knee-safe", label: t.kneeSafe },
+          { id: "knee-danger", label: t.kneeDanger, important: true },
         ];
       case "call-choice":
         return [
@@ -778,9 +851,9 @@ export function ParentHealthChat() {
                   </button>
                 </div>
               ) : message.replying ? (
-                <div className="nutrition-loading" role="status">
+                <div className="nutrition-loading" role="status" aria-live="polite">
                   <LoaderCircle size={20} />
-                  <span>{t.thinking}</span>
+                  <span>{message.proactiveThinking ? t.proactiveThinking : t.thinking}</span>
                 </div>
               ) : message.loading ? (
                 <div className="nutrition-loading" role="status">
@@ -834,13 +907,15 @@ export function ParentHealthChat() {
                 </div>
               ) : message.escalation ? (
                 <CareEscalationCard escalation={message.escalation} language={language} audience="parent" />
+              ) : message.followUpConfirmation ? (
+                <FollowUpConfirmationCard language={language} />
               ) : message.health ? (
                 <div className="health-summary">
                   <div className="health-summary-title"><strong>{t.healthTitle}</strong><span>{t.synced}</span></div>
                   <div className="health-metrics">
-                    <div><Moon size={18} /><strong>6h 12m</strong><small>{t.sleep}</small></div>
-                    <div><HeartPulse size={18} /><strong>72 bpm</strong><small>{t.heart}</small></div>
-                    <div><Footprints size={18} /><strong>320</strong><small>{t.steps}</small></div>
+                    <div><Moon size={18} /><strong>{morningHealthFixture.sleep.value}</strong><small>{t.sleep}</small></div>
+                    <div><HeartPulse size={18} /><strong>{morningHealthFixture.restingHeartRate.value} bpm</strong><small>{t.heart}</small></div>
+                    <div><Footprints size={18} /><strong>{morningHealthFixture.steps.value}</strong><small>{t.steps}</small></div>
                   </div>
                   <p><span>{t.summary}</span><Sparkles size={17} /></p>
                 </div>
@@ -859,7 +934,7 @@ export function ParentHealthChat() {
         <div ref={endRef} />
       </section>
 
-      {isWatchSynced && quickActions.length > 0 && (
+      {isWatchSynced && isProactiveQuestionReady && quickActions.length > 0 && (
         <div className="quick-action-area">
           {step === "initial" && <small className="quick-action-basis"><Sparkles size={14} />{t.suggestionBasis}</small>}
           <div className="quick-actions" aria-label="Suggested replies">

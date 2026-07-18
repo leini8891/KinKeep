@@ -841,7 +841,7 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   .family-profile-picker > .family-profile-more { margin-top: 3px; border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; color: var(--sage-deep); font-weight: 750; }
   .family-profile-picker > .family-profile-more > svg:last-child { justify-self: end; }
   .family-mobile-hero { display: grid; gap: 13px; padding: 18px 0 20px; border-bottom: 1px solid var(--line); }
-  .family-mobile-hero h1 { max-width: 13ch; }
+  .family-mobile-hero h1 { max-width: none; font-size: 30px; }
   .family-mobile-section { padding: 20px 0 8px; }
   .family-mobile-section > h2 { margin-bottom: 8px; }
   .family-stack { display: grid; gap: 14px; }
@@ -997,8 +997,146 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
 .family-desktop-main > .care-escalation-card { margin-bottom: 22px; }
 .family-button.demo-trigger { border-color: #d88965; color: #9d4d2f; background: #fff8f3; }
 
+/* Calm, non-urgent follow-up after an older adult asks family to call. */
+.parent-follow-up-card {
+  width: 100%;
+  display: grid;
+  gap: 13px;
+  padding: 17px;
+  border: 1px solid #a9c8b8;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #f5fbf7, #eaf5ef);
+  color: var(--ink);
+  box-shadow: 0 14px 34px rgba(38, 83, 62, .08);
+}
+.message .parent-follow-up-card { min-width: min(620px, 72vw); }
+.message .bubble:has(.parent-follow-up-card) { padding: 0; background: transparent; box-shadow: none; }
+.parent-follow-up-heading { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+.parent-follow-up-heading > span { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 13px; background: #d8ecdf; color: var(--sage-deep); }
+.parent-follow-up-heading > div { display: grid; gap: 2px; }
+.parent-follow-up-heading small { color: var(--sage-deep); font-weight: 750; }
+.parent-follow-up-heading strong { font-size: 18px; }
+.parent-follow-up-card > p { color: var(--ink-soft); line-height: 1.55; }
+.parent-follow-up-timeline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.parent-follow-up-timeline span { min-height: 58px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 8px; padding: 10px; border-radius: 13px; background: rgba(255, 255, 255, .72); color: var(--ink-soft); font-size: 12px; }
+.parent-follow-up-timeline span > svg { grid-row: 1 / 3; color: var(--sage-deep); }
+.parent-follow-up-timeline b { color: var(--ink); font-size: 14px; }
+.parent-follow-up-safety { display: flex; align-items: flex-start; gap: 7px; padding-top: 11px; border-top: 1px solid rgba(65, 113, 89, .14); font-size: 12px; }
+.parent-follow-up-safety svg { flex: 0 0 auto; margin-top: 2px; color: var(--sage-deep); }
+
+/* One complete family follow-up: evidence -> decision -> tasks -> outcome. */
+.episode-panel {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 22px;
+  background: rgba(255, 253, 248, .9);
+  box-shadow: 0 14px 38px rgba(38, 63, 52, .07);
+}
+.episode-summary { display: grid; gap: 9px; }
+.episode-summary h2 { max-width: 33ch; font-size: clamp(21px, 2vw, 29px); line-height: 1.25; }
+.episode-summary p { max-width: 70ch; color: var(--ink-soft); }
+.episode-evidence { border: 1px solid var(--line); border-radius: 17px; padding: 15px 17px; background: #fff; }
+.episode-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.episode-section-heading > div { display: grid; gap: 2px; }
+.episode-section-heading small { color: var(--ink-soft); }
+.episode-section-heading > span { min-width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; background: var(--sage-pale); color: var(--sage-deep); font-weight: 800; }
+.episode-evidence ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; margin: 0; padding: 0; list-style: none; }
+.episode-evidence li { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.episode-evidence li:nth-last-child(-n+2) { border-bottom: 0; }
+.episode-evidence li span { color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.episode-evidence li strong { font-size: 14px; line-height: 1.45; }
+.episode-uncertainty,
+.episode-escalation-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: #fbf1dc;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.episode-uncertainty svg,
+.episode-escalation-rule svg { flex: 0 0 auto; margin-top: 2px; color: #9c6e28; }
+.episode-uncertainty span,
+.episode-escalation-rule span { display: grid; gap: 2px; }
+.episode-uncertainty strong,
+.episode-escalation-rule strong { color: var(--ink); }
+.episode-options-heading h2 { font-size: 20px; }
+.episode-options-heading p { margin-top: 3px; color: var(--ink-soft); font-size: 13px; }
+.episode-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.episode-option {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.episode-option:hover { border-color: #95b6a5; }
+.episode-option.selected { border-color: var(--sage-deep); background: var(--sage-pale); box-shadow: 0 0 0 2px rgba(38, 97, 73, .08); }
+.episode-option > span:nth-child(2) { display: grid; gap: 4px; }
+.episode-option small { color: var(--sage-deep); font-size: 11px; font-weight: 800; }
+.episode-option strong { font-size: 15px; }
+.episode-option em { color: var(--ink-soft); font-size: 12px; font-style: normal; line-height: 1.45; }
+.episode-option-radio { width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid #a7b8ae; border-radius: 999px; color: var(--sage-deep); }
+.episode-option > svg { margin-top: 2px; color: var(--ink-soft); }
+.episode-actions { justify-content: flex-end; }
+.episode-actions .family-button { min-width: 150px; }
+.episode-status-heading { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 11px; }
+.episode-status-heading > span { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: #dceee3; color: var(--sage-deep); }
+.episode-status-heading > div { display: grid; gap: 2px; }
+.episode-status-heading small { color: var(--ink-soft); font-weight: 700; }
+.episode-status-heading h2 { font-size: 24px; }
+.episode-active,
+.episode-resolved { border-color: #abc7b7; background: linear-gradient(145deg, #fffdf8, #eef7f1); }
+.episode-paused { background: #fbf7ee; }
+.episode-task-list { display: grid; border: 1px solid var(--line); border-radius: 16px; padding: 0 15px; background: rgba(255, 255, 255, .72); }
+.episode-task-list > div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.episode-task-list > div:last-child { border-bottom: 0; }
+.episode-task-list > div > span:nth-child(2) { display: grid; gap: 3px; }
+.episode-task-list small { color: var(--ink-soft); }
+.episode-task-list em { color: var(--sage-deep); font-size: 12px; font-style: normal; font-weight: 800; }
+.episode-task-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: var(--sage-pale); color: var(--sage-deep); }
+.episode-simulate-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed #7fa78f;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .72);
+  color: var(--sage-deep);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.episode-outcome-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.episode-outcome-grid > div { display: grid; gap: 4px; border-radius: 14px; padding: 14px; background: rgba(255, 255, 255, .76); }
+.episode-outcome-grid strong { font-size: 18px; }
+.episode-outcome-grid span { color: var(--ink-soft); font-size: 12px; }
+.episode-outcome-note { border-top: 1px solid var(--line); padding-top: 15px; color: var(--ink-soft); line-height: 1.55; }
+.episode-reset-button { justify-self: start; border: 0; padding: 0; background: transparent; color: var(--sage-deep); font: inherit; font-size: 13px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+.family-safety-demo { display: grid; gap: 10px; border: 1px dashed #a7bcae; border-radius: 18px; padding: 17px; background: rgba(239, 247, 242, .72); }
+.family-safety-demo h2 { font-size: 18px; line-height: 1.35; }
+.family-safety-demo p { color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
+.family-safety-demo-desktop { grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin-top: 20px; }
+.family-safety-demo-desktop > div { display: grid; gap: 8px; }
+
 @media (max-width: 720px) {
   .message .care-escalation-card { min-width: 0; }
+  .message .parent-follow-up-card { min-width: 0; }
   .care-escalation-card { padding: 15px; border-radius: 17px; }
   .care-escalation-heading { grid-template-columns: auto 1fr; }
   .care-live-status { grid-column: 2; justify-self: start; }
@@ -1006,4 +1144,19 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   .care-official-options > strong { grid-column: auto; }
   .family-stack > .family-between { gap: 10px; }
   .family-stack > .family-between .demo-trigger { flex: 0 0 auto; }
+  .parent-follow-up-card { padding: 15px; border-radius: 17px; }
+  .parent-follow-up-timeline { grid-template-columns: 1fr; }
+  .episode-panel { gap: 15px; padding: 16px; border-radius: 18px; }
+  .episode-summary h2 { font-size: 20px; }
+  .episode-evidence ul,
+  .episode-options,
+  .episode-outcome-grid { grid-template-columns: 1fr; }
+  .episode-evidence li:nth-last-child(2) { border-bottom: 1px solid var(--line); }
+  .episode-option { padding: 12px; }
+  .episode-actions { display: grid; grid-template-columns: 1fr; }
+  .episode-actions .family-button { width: 100%; min-width: 0; }
+  .episode-status-heading h2 { font-size: 21px; }
+  .episode-task-list > div { grid-template-columns: auto minmax(0, 1fr); }
+  .episode-task-list em { grid-column: 2; }
+  .family-safety-demo-desktop { grid-template-columns: 1fr; }
 }

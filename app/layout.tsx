@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://kinkeep-family-health.leini9591.chatgpt.site"),
   title,
   description,
+  icons: { icon: "/favicon.svg" },
   openGraph: {
     title,
     description,
