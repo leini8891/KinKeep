@@ -49,3 +49,6 @@ next-env.d.ts
 /docs/PRD_KinKeep_OPC.md
 /docs/PITCH_DECK.md
 /docs/SUBMISSION_OpenArena.md
+
+# typescript incremental build cache
+*.tsbuildinfo
