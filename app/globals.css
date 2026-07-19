@@ -126,6 +126,8 @@ button { color: inherit; }
 .message.alert .bubble { background: var(--coral-pale); }
 .bubble p { margin: 0; font-size: 16px; line-height: 1.55; }
 .bubble p + p { margin-top: 5px; }
+.advice-listen-button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 11px; padding: 7px 10px; border: 1px solid rgba(178, 82, 55, .42); border-radius: 999px; background: rgba(255,255,255,.72); color: var(--coral); font-weight: 750; cursor: pointer; }
+.advice-listen-button:hover { background: #fff; }
 
 .watch-sync-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 11px 12px; min-width: min(280px, 72vw); }
 .watch-sync-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 15px; background: rgba(255,255,255,.72); color: var(--sage-deep); box-shadow: inset 0 0 0 1px rgba(64,108,89,.08); }
@@ -186,6 +188,18 @@ button { color: inherit; }
 .quick-actions button { border: 1px solid #9cb7aa; border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.68); cursor: pointer; transition: transform .18s ease, background .18s ease; }
 .quick-actions button:hover { transform: translateY(-1px); background: var(--sage-pale); }
 .quick-actions button.important { border-color: var(--coral); color: var(--coral); }
+.quick-actions button.with-detail {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 3px;
+  border-radius: 16px;
+  padding: 11px 14px;
+  color: var(--ink);
+  text-align: left;
+}
+.quick-actions button.with-detail > span { font-weight: 750; }
+.quick-actions button.with-detail > small { color: var(--ink-soft); font-size: 11px; line-height: 1.35; }
+.quick-actions button.with-detail.important > small { color: var(--ink-soft); }
 
 .chat-controls { position: sticky; bottom: 0; margin-top: auto; padding-top: 15px; background: linear-gradient(180deg, rgba(255,253,248,0), var(--paper) 18%); }
 .safety-actions { display: grid; grid-template-columns: 1.35fr .9fr; gap: 9px; margin-bottom: 10px; }
@@ -200,10 +214,9 @@ button { color: inherit; }
 .text-entry input { width: 100%; min-width: 0; border: 0; outline: none; padding: 8px 9px; background: transparent; color: var(--ink); }
 .text-entry input::placeholder { color: #9ca39e; }
 .text-entry button { width: 35px; height: 35px; border: 0; background: var(--ink); color: #fff; }
-.voice-state { min-height: 18px; padding-top: 5px; color: var(--ink-soft); font-size: 11px; text-align: center; }
+.voice-state { padding-top: 5px; color: var(--ink-soft); font-size: 11px; text-align: center; }
 .voice-state.active { color: var(--sage-deep); font-weight: 700; }
 .icon-button:disabled { cursor: wait; opacity: .8; }
-.privacy-note { display: flex; align-items: center; justify-content: center; gap: 5px; color: #8c968f; font-size: 10px; }
 
 @keyframes listening { 50% { box-shadow: 0 0 0 7px rgba(49,106,92,.12); } }
 @keyframes nutrition-spin { to { transform: rotate(360deg); } }
@@ -356,16 +369,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(49,106,92,.2
 }
 
 .family-preview-workspace {
-  width: min(100%, 1040px);
+  width: min(100%, 560px);
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 430px) minmax(260px, 360px);
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
   justify-content: center;
-  gap: clamp(28px, 6vw, 72px);
 }
 
 .family-preview-device {
+  flex: 0 0 auto;
   width: min(390px, calc(100vw - 40px));
   overflow: hidden;
   border: 9px solid #17352f;
@@ -390,21 +402,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(49,106,92,.2
   border-radius: 28px;
   background: var(--paper);
 }
-
-.family-preview-note {
-  display: grid;
-  gap: 12px;
-  margin-top: 76px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 22px;
-  background: rgba(255, 253, 248, .84);
-  box-shadow: 0 18px 48px rgba(70, 65, 53, .09);
-}
-
-.family-preview-note strong { font-size: 18px; }
-.family-preview-note p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
-.family-preview-note small { color: var(--sage-deep); line-height: 1.5; }
 
 .family-desktop-shell {
   width: min(100%, 1240px);
@@ -768,8 +765,7 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
 @media (max-width: 720px) {
   .family-preview-stage { padding: 20px 14px 32px; }
   .family-preview-header { align-items: flex-start; }
-  .family-preview-header > a,
-  .family-preview-note { display: none; }
+  .family-preview-header > a { display: none; }
   .family-preview-workspace { display: block; }
   .family-preview-device { margin: 0 auto; }
   .family-preview-device iframe { height: calc(100dvh - 180px); min-height: 680px; }
@@ -885,7 +881,7 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   .family-actions .family-button { width: 100%; }
 }
 
-/* Visible care escalation: the demo shows exactly who was contacted and when. */
+/* Consent-led family contact: one selected person, one clear handoff. */
 .care-escalation-card {
   width: 100%;
   display: grid;
@@ -898,8 +894,9 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   box-shadow: 0 14px 36px rgba(85, 62, 20, .09);
 }
 
-.message .care-escalation-card { min-width: min(620px, 72vw); }
-.message .bubble:has(.care-escalation-card) { padding: 0; background: transparent; box-shadow: none; }
+.message:has(.care-escalation-card) { width: 100%; min-width: 0; }
+.message .care-escalation-card { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.message .bubble:has(.care-escalation-card) { width: 100%; min-width: 0; padding: 0; background: transparent; box-shadow: none; }
 .care-escalation-card.urgent,
 .care-escalation-card.wandering { border-color: #e5907d; background: linear-gradient(145deg, #fff9f4, #fff0e8); }
 
@@ -951,22 +948,46 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   font-size: 12px;
 }
 
-.care-channel-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-.care-channel-list li {
+.care-contact-summary {
   display: grid;
   grid-template-columns: 28px 1fr auto;
   gap: 8px;
   align-items: center;
-  min-height: 58px;
-  padding: 9px 0;
-  border-top: 1px solid rgba(74, 68, 50, .11);
-  color: #8e958e;
+  min-height: 62px;
+  padding: 11px 12px;
+  border: 1px solid rgba(74, 68, 50, .11);
+  border-radius: 14px;
+  background: rgba(255,255,255,.72);
+  color: var(--sage-deep);
 }
-.care-channel-list li > span { display: grid; gap: 2px; }
-.care-channel-list li small { color: inherit; }
-.care-channel-list li.complete { color: #2c755d; }
-.care-channel-list li.active { color: #b45a35; }
-.care-channel-list li.pending { opacity: .68; }
+.care-contact-summary > span { display: grid; gap: 3px; }
+.care-contact-summary small { color: var(--ink-soft); }
+.care-contact-summary.complete { border-color: #b8d0c2; background: var(--sage-pale); }
+
+.care-whatsapp-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.care-whatsapp-actions a,
+.care-whatsapp-actions button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--sage-deep);
+  border-radius: 13px;
+  padding: 9px 11px;
+  background: #fff;
+  color: var(--sage-deep);
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.care-whatsapp-actions button { background: var(--sage-deep); color: #fff; }
 
 .care-acknowledge {
   min-height: 46px;
@@ -983,17 +1004,6 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   cursor: pointer;
 }
 
-.care-official-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(160, 83, 50, .18);
-}
-.care-official-options > strong { grid-column: 1 / -1; margin-bottom: 2px; font-size: 13px; color: #8c4a2f; }
-.care-official-options span { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.82); color: var(--ink-soft); font-size: 12px; }
-.care-official-options b { display: block; color: var(--ink); font-size: 15px; }
-.care-demo-note { font-size: 11px; color: #8f8d82 !important; }
 .family-desktop-main > .care-escalation-card { margin-bottom: 22px; }
 .family-button.demo-trigger { border-color: #d88965; color: #9d4d2f; background: #fff8f3; }
 
@@ -1009,8 +1019,9 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   color: var(--ink);
   box-shadow: 0 14px 34px rgba(38, 83, 62, .08);
 }
-.message .parent-follow-up-card { min-width: min(620px, 72vw); }
-.message .bubble:has(.parent-follow-up-card) { padding: 0; background: transparent; box-shadow: none; }
+.message:has(.parent-follow-up-card) { width: 100%; min-width: 0; }
+.message .parent-follow-up-card { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.message .bubble:has(.parent-follow-up-card) { width: 100%; min-width: 0; padding: 0; background: transparent; box-shadow: none; }
 .parent-follow-up-heading { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
 .parent-follow-up-heading > span { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 13px; background: #d8ecdf; color: var(--sage-deep); }
 .parent-follow-up-heading > div { display: grid; gap: 2px; }
@@ -1018,7 +1029,7 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
 .parent-follow-up-heading strong { font-size: 18px; }
 .parent-follow-up-card > p { color: var(--ink-soft); line-height: 1.55; }
 .parent-follow-up-timeline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.parent-follow-up-timeline span { min-height: 58px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 8px; padding: 10px; border-radius: 13px; background: rgba(255, 255, 255, .72); color: var(--ink-soft); font-size: 12px; }
+.parent-follow-up-timeline span { min-width: 0; min-height: 58px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px 8px; padding: 10px; border-radius: 13px; background: rgba(255, 255, 255, .72); color: var(--ink-soft); font-size: 12px; }
 .parent-follow-up-timeline span > svg { grid-row: 1 / 3; color: var(--sage-deep); }
 .parent-follow-up-timeline b { color: var(--ink); font-size: 14px; }
 .parent-follow-up-safety { display: flex; align-items: flex-start; gap: 7px; padding-top: 11px; border-top: 1px solid rgba(65, 113, 89, .14); font-size: 12px; }
@@ -1140,8 +1151,7 @@ button.family-health-card:hover { border-color: var(--sage); transform: translat
   .care-escalation-card { padding: 15px; border-radius: 17px; }
   .care-escalation-heading { grid-template-columns: auto 1fr; }
   .care-live-status { grid-column: 2; justify-self: start; }
-  .care-official-options { grid-template-columns: 1fr; }
-  .care-official-options > strong { grid-column: auto; }
+  .care-whatsapp-actions { grid-template-columns: 1fr; }
   .family-stack > .family-between { gap: 10px; }
   .family-stack > .family-between .demo-trigger { flex: 0 0 auto; }
   .parent-follow-up-card { padding: 15px; border-radius: 17px; }

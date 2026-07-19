@@ -10,8 +10,21 @@ const SUPPORTED_AUDIO_TYPES = new Set([
   "audio/ogg",
 ]);
 
+export function normalizeAudioType(value: string) {
+  return value.split(";", 1)[0].trim().toLowerCase();
+}
+
+function audioExtension(type: string) {
+  if (type === "audio/mp4" || type === "audio/m4a") return "mp4";
+  if (type === "audio/ogg") return "ogg";
+  if (type === "audio/wav") return "wav";
+  if (type === "audio/mpeg" || type === "audio/mp3" || type === "audio/mpga") return "mp3";
+  return "webm";
+}
+
 export async function POST(request: Request) {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
     return Response.json({ error: "Voice transcription is not configured." }, { status: 503 });
   }
 
@@ -26,13 +39,21 @@ export async function POST(request: Request) {
     if (audio.size === 0 || audio.size > MAX_AUDIO_BYTES) {
       return Response.json({ error: "The recording is empty or too large." }, { status: 413 });
     }
-    if (audio.type && !SUPPORTED_AUDIO_TYPES.has(audio.type)) {
+    const normalizedType = normalizeAudioType(audio.type);
+    if (normalizedType && !SUPPORTED_AUDIO_TYPES.has(normalizedType)) {
       return Response.json({ error: "This audio format is not supported." }, { status: 415 });
     }
 
+    const fileName = audio.name || `voice.${audioExtension(normalizedType)}`;
+    const normalizedAudio = normalizedType && normalizedType !== audio.type
+      ? new File([audio], fileName, {
+          type: normalizedType,
+          lastModified: audio.lastModified,
+        })
+      : audio;
     const openAIForm = new FormData();
-    openAIForm.append("file", audio, audio.name || `voice.${audio.type.includes("mp4") ? "mp4" : "webm"}`);
-    openAIForm.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
+    openAIForm.append("file", normalizedAudio, fileName);
+    openAIForm.append("model", process.env.OPENAI_TRANSCRIBE_MODEL?.trim() || "gpt-4o-mini-transcribe");
     openAIForm.append("language", language);
     openAIForm.append("response_format", "json");
     openAIForm.append(
@@ -45,7 +66,7 @@ export async function POST(request: Request) {
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: openAIForm,
     });

@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import { CareEscalationCard } from "../care-escalation-card";
 import {
   ESCALATION_EVENT,
+  isCareEscalationAcknowledged,
   readCareEscalation,
   saveCareEscalation,
   type CareEscalation,
@@ -90,6 +91,7 @@ const members = {
 const demoWanderingEscalation: CareEscalation = {
   id: "care-demo-wandering",
   kind: "wandering",
+  initialContact: "david",
   stage: "primary_multichannel",
   reasonZh: "离开安全区域后未回应，可能迷路",
   reasonEn: "Left the safe zone and did not respond; may be lost",
@@ -202,14 +204,14 @@ export function FamilyCareDashboard() {
   const [alertRead, setAlertRead] = useState(false);
   const [calling, setCalling] = useState(false);
   const [escalation, setEscalation] = useState<CareEscalation>(demoWanderingEscalation);
-  const [showWanderingDemo, setShowWanderingDemo] = useState(false);
+  const [showEscalation, setShowEscalation] = useState(false);
   const t = (zh: string, en: string) => text(language, zh, en);
   const selectedMember = members[member][language];
   const callLabel = calling ? t("正在拨打妈妈…", "Calling Mum…") : t("联系妈妈", "Call Mum");
   const selectedCallLabel = calling
     ? t(`正在拨打${selectedMember.name}…`, `Calling ${selectedMember.name}…`)
     : t(`联系${selectedMember.name}`, `Call ${selectedMember.name}`);
-  const openAlertCount = (showWanderingDemo && escalation.stage !== "backup_acknowledged" ? 1 : 0) + (alertRead ? 0 : 1);
+  const openAlertCount = (showEscalation && !isCareEscalationAcknowledged(escalation) ? 1 : 0) + (alertRead ? 0 : 1);
   const activePlan = episode.selectedPlan ? carePlans[episode.selectedPlan] : null;
   const followUpCount = episode.status === "awaiting_family" ? 1 : 0;
 
@@ -219,7 +221,15 @@ export function FamilyCareDashboard() {
   };
 
   useEffect(() => {
-    const syncEscalation = () => setEscalation(readCareEscalation() ?? demoWanderingEscalation);
+    const syncEscalation = () => {
+      const storedEscalation = readCareEscalation();
+      setEscalation(storedEscalation ?? demoWanderingEscalation);
+      setShowEscalation(Boolean(storedEscalation));
+      if (storedEscalation && !isCareEscalationAcknowledged(storedEscalation)) {
+        setMobileView("alerts");
+        setDesktopView("alerts");
+      }
+    };
     syncEscalation();
     window.addEventListener("storage", syncEscalation);
     window.addEventListener(ESCALATION_EVENT, syncEscalation);
@@ -241,7 +251,12 @@ export function FamilyCareDashboard() {
   }, []);
 
   const acknowledgeEscalation = () => {
-    const updated: CareEscalation = { ...escalation, stage: "backup_acknowledged" };
+    const acknowledgedStage = escalation.stage === "backup_notified"
+      ? "backup_acknowledged"
+      : escalation.stage === "primary_multichannel"
+        ? "primary_multichannel_acknowledged"
+        : "primary_push_acknowledged";
+    const updated: CareEscalation = { ...escalation, stage: acknowledgedStage };
     setEscalation(updated);
     saveCareEscalation(updated);
   };
@@ -277,7 +292,7 @@ export function FamilyCareDashboard() {
   };
 
   const openWanderingDemo = () => {
-    setShowWanderingDemo(true);
+    setShowEscalation(true);
     const freshDemo = { ...demoWanderingEscalation, stage: "primary_multichannel" as const };
     setEscalation(freshDemo);
     saveCareEscalation(freshDemo);
@@ -359,7 +374,7 @@ export function FamilyCareDashboard() {
           {mobileView === "alerts" && (
             <section className="family-mobile-section family-stack">
               <div><h1>{t("即时通知", "Alerts")}</h1><p>{t("按紧急程度集中显示需要你知道的变化", "Meaningful changes are grouped here by urgency")}</p></div>
-              {showWanderingDemo ? (
+              {showEscalation ? (
                 <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />
               ) : (
                 <section className="family-safety-demo">
@@ -399,8 +414,8 @@ export function FamilyCareDashboard() {
               <div className="family-care-circle-list">
                 <div><span className="family-avatar attention">陈</span><span><strong>{t("陈阿姨", "Mdm Tan")}</strong><small>{t("妈妈 · 健康档案", "Mum · health profile")}</small></span><span className="family-badge attention">{t("需要留意", "Needs attention")}</span></div>
                 <div><span className="family-avatar">爸</span><span><strong>{t("陈叔叔", "Mr Tan")}</strong><small>{t("爸爸 · 健康档案", "Dad · health profile")}</small></span><span className="family-badge stable">{t("状态稳定", "Stable")}</span></div>
-                <div><span className="family-avatar">E</span><span><strong>Elena</strong><small>{t("主要联系人 · 家属协作者", "Primary contact · family caregiver")}</small></span><span className="family-badge private">{t("权限受限", "Limited access")}</span></div>
-                <div><span className="family-avatar">{t("弟", "B")}</span><span><strong>{t("弟弟", "Brother")}</strong><small>{t("照护分工 · 家属协作者", "Care tasks · family caregiver")}</small></span><span className="family-badge stable">{t("照护协作", "Care collaborator")}</span></div>
+                <div><span className="family-avatar">E</span><span><strong>Elena</strong><small>{t("家庭管理员 · 照护决策人", "Family admin · care decision-maker")}</small></span><span className="family-badge private">{t("权限受限", "Limited access")}</span></div>
+                <div><span className="family-avatar">{t("弟", "B")}</span><span><strong>David</strong><small>{t("就近响应联系人 · 家属协作者", "Nearby responder · family caregiver")}</small></span><span className="family-badge stable">{t("住得较近", "Lives nearby")}</span></div>
               </div>
               <p className="family-mobile-family-note">{t("只有已连接健康数据的人会出现在健康档案选择器中；其他成员仍可参与照护与权限分工。", "Only people with connected health data appear in the profile selector. Other members can still share care tasks and permissions.")}</p>
             </section>
@@ -472,7 +487,7 @@ export function FamilyCareDashboard() {
                     )}
                   </div>
                 </section>
-                <section className="family-panel"><div className="family-between"><h2>{t("照护协作", "Care team")}</h2><span>{t("2 位家属", "2 family caregivers")}</span></div><div className="family-collaborator-list"><div><span className="family-avatar">E</span><span><strong>Elena</strong><small>{t("主要联系人 · 批准高影响行动", "Primary contact · approves high-impact actions")}</small></span></div><div><span className="family-avatar">{t("弟", "B")}</span><span><strong>{t("弟弟 · David", "Brother · David")}</strong><small>{t("交通、杂货与周末探访", "Transport, groceries, and weekend visits")}</small></span></div></div></section>
+                <section className="family-panel"><div className="family-between"><h2>{t("照护协作", "Care team")}</h2><span>{t("2 位家属", "2 family caregivers")}</span></div><div className="family-collaborator-list"><div><span className="family-avatar">E</span><span><strong>Elena</strong><small>{t("家庭管理员 · 批准高影响行动", "Family admin · approves high-impact actions")}</small></span></div><div><span className="family-avatar">{t("弟", "B")}</span><span><strong>{t("弟弟 · David", "Brother · David")}</strong><small>{t("就近响应 · 交通、杂货与探访", "Nearby response · transport, groceries, and visits")}</small></span></div></div></section>
               </div>
               <div className="family-story-grid">
                 <section className="family-panel family-story"><span className="family-badge attention">{t("妈妈 · 需要留意", "Mum · needs attention")}</span><h2>{t("不是单一心率报警，而是今早整体规律变了。", "This is not a single heart-rate alert. Her whole morning pattern changed.")}</h2><p>{t("睡眠、活动、静息心率和早餐规律同时偏离个人基线；她已回复并确认在家，因此当前是“需要家人跟进”，不是紧急状态。", "Sleep, activity, resting heart rate, and breakfast routine all moved away from her baseline. She replied and confirmed she is at home, so this needs family follow-up rather than emergency action.")}</p><div className="family-actions"><button className="family-button primary" onClick={() => setDesktopView("trends")}>{t("查看异常证据", "View evidence")}</button><button className="family-button" onClick={callMum}><Phone size={17} />{callLabel}</button></div></section>
@@ -510,7 +525,7 @@ export function FamilyCareDashboard() {
           {desktopView === "alerts" && (
             <>
               <header className="family-page-header"><div><h1>{t("通知中心", "Notifications")}</h1><p>{t("所有需要家属知道的变化集中在这里，并按紧急程度排序", "Everything the family needs to know, grouped and ordered by urgency")}</p></div>{openAlertCount > 0 && <span className="family-badge warning">{language === "zh" ? `${openAlertCount} 条未处理` : `${openAlertCount} open`}</span>}</header>
-              {showWanderingDemo ? (
+              {showEscalation ? (
                 <CareEscalationCard escalation={escalation} language={language} audience="family" onAcknowledge={acknowledgeEscalation} />
               ) : (
                 <section className="family-panel family-safety-demo family-safety-demo-desktop">
@@ -605,7 +620,7 @@ export function FamilyCareDashboard() {
                     <div><time>08:05</time><span><strong>{t("陪伴助手发起日常问候", "Companion started a routine check-in")}</strong><small>{t("常规行动 · 无需家属批准", "Routine action · no family approval required")}</small></span></div>
                   </div>
                 </section>
-                <aside className="family-panel family-permissions"><h2>{t("家庭权限", "Family access")}</h2><div><strong>{t("Elena · 主要联系人", "Elena · primary contact")}</strong><small>{t("查看全部摘要、异常证据、批准行动", "Can view summaries and evidence and approve actions")}</small></div><div><strong>{t("弟弟 · 协作家属", "Brother · family collaborator")}</strong><small>{t("查看日程与任务；不看详细健康数据", "Can view schedules and tasks, not detailed health data")}</small></div><div><strong>{t("陈阿姨 · 本人", "Mdm Tan · account owner")}</strong><small>{t("可随时调整共享范围与联系人", "Can change sharing scope and contacts at any time")}</small></div></aside>
+                <aside className="family-panel family-permissions"><h2>{t("家庭权限", "Family access")}</h2><div><strong>{t("Elena · 家庭管理员", "Elena · family admin")}</strong><small>{t("查看全部摘要、异常证据、批准行动", "Can view summaries and evidence and approve actions")}</small></div><div><strong>{t("David · 就近响应联系人", "David · nearby responder")}</strong><small>{t("接收照护提醒、查看日程与任务；不看详细健康数据", "Receives care alerts and can view schedules and tasks, not detailed health data")}</small></div><div><strong>{t("陈阿姨 · 本人", "Mdm Tan · account owner")}</strong><small>{t("可随时调整共享范围与联系人", "Can change sharing scope and contacts at any time")}</small></div></aside>
               </div>
             </>
           )}

@@ -2,7 +2,6 @@
 
 import {
   Camera,
-  CheckCircle2,
   CircleCheck,
   Footprints,
   HeartPulse,
@@ -18,6 +17,7 @@ import {
   Utensils,
   UserRound,
   UsersRound,
+  Volume2,
   Watch,
 } from "lucide-react";
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -28,23 +28,33 @@ import { createCareEpisode, saveCareEpisode } from "./care-episode";
 import { morningHealthFixture } from "./demo-health-data";
 import { FollowUpConfirmationCard } from "./follow-up-confirmation-card";
 import {
+  ESCALATION_EVENT,
+  careWhatsAppHref,
   createCareEscalation,
+  readCareEscalation,
   saveCareEscalation,
+  type CareContact,
   type CareEscalation,
   type EscalationKind,
-  type EscalationStage,
 } from "./care-escalation";
 
 type Language = "zh" | "en";
+type DayPeriod = "morning" | "afternoon" | "evening";
+type MealPeriod = "breakfast" | "lunch" | "dinner";
+type TimeContext = { dayPeriod: DayPeriod; mealPeriod: MealPeriod };
+type GuidanceKind = "general" | "knee" | "stomach" | "dizziness";
 type Step =
   | "initial"
-  | "breakfast"
+  | "meal-check"
+  | "stomach-safety"
+  | "stomach-duration"
   | "knee-duration"
   | "knee-safety"
   | "call-choice"
+  | "family-contact-choice"
   | "sleep-symptoms"
   | "meal-photo"
-  | "help-urgent"
+  | "help-problem"
   | "done";
 type MessageTone = "normal" | "status" | "alert";
 type Message = {
@@ -64,13 +74,37 @@ type Message = {
   error?: string;
   escalation?: CareEscalation;
   followUpConfirmation?: boolean;
+  readAloud?: boolean;
 };
-type QuickAction = { id: string; label: string; important?: boolean };
+type QuickAction = {
+  id: string;
+  label: string;
+  detail?: string;
+  important?: boolean;
+};
 
 const copy = {
   zh: {
     name: "陈阿姨",
-    presence: "早上好，今天也陪着你",
+    greetings: {
+      morning: "早上好",
+      afternoon: "下午好",
+      evening: "晚上好",
+    },
+    presenceSuffix: "今天也陪着你",
+    mealQuestions: {
+      breakfast: "早餐吃了吗？",
+      lunch: "午餐吃了吗？",
+      dinner: "晚餐吃了吗？",
+    },
+    mealNotYet: {
+      breakfast: "早餐还没吃",
+      lunch: "午餐还没吃",
+      dinner: "晚餐还没吃",
+    },
+    helloHealthContext: "昨晚睡得比平时少一些，今天还没出去散步。",
+    helloKneePrompt: "膝盖还舒服吗？",
+    fineAcknowledgement: "那就好。",
     medicine: "降压药已完成",
     lunch: "午餐提醒",
     stretch: "室内拉伸",
@@ -86,22 +120,22 @@ const copy = {
     steps: "步数 · 偏少",
     summary: "没有紧急问题，但今天早上比平时安静。",
     companion: "陪伴助手",
-    hello: "早上好，陈阿姨。昨晚睡得比平时少一些，今天还没出去散步。\n膝盖还舒服吗？早餐吃了吗？",
     well: "我很好",
     help: "需要帮助",
     knee: "膝盖有点痛",
     poorSleep: "昨晚没睡好",
     noAppetite: "今天没胃口",
-    breakfastNotYet: "早餐还没吃",
     stomach: "肚子有点痛",
     stomachMine: "肚子有点痛。",
     stomachAsk: "肚子是今天开始不舒服，还是最近几天反复出现？",
+    stomachSafetyAsk: "听到您肚子疼，我在这里陪您。现在有没有剧烈疼痛、呕吐、发烧、冒冷汗、胸闷，或者肚子变硬？",
+    stomachSafe: "没有这些情况",
+    stomachDanger: "有其中一种",
     suggestionBasis: "根据同步数据和近期健康记录推荐",
     fine: "我很好。",
-    fineNext: "那就好。早餐吃了吗？",
     ate: "已经吃了",
     notYet: "还没有",
-    uploadMeal: "拍午餐照片",
+    uploadMeal: "拍餐食照片",
     kneeMine: "膝盖有点痛。",
     kneeAsk: "疼痛是今天刚开始，还是已经有几天了？",
     todayPain: "今天开始",
@@ -113,8 +147,23 @@ const copy = {
     painFollow: "我已经记录下来。需要请 Elena 今天给你打电话吗？",
     yesCall: "好的，请联系",
     noCall: "暂时不用",
+    contactFamilyAsk: "我现在联系你的家属好吗？",
+    guidanceGeneral: "参考建议：如果有呼吸困难、失去意识、大量出血或严重外伤，请立即拨打 995；如果不是危及生命但需要医疗判断，可联系 NurseFirst 6262 6262。",
+    guidanceKnee: "参考建议：先停止走动，避免独自站立。若跌倒后无法起身、呼吸困难、失去意识、大量出血或出现严重外伤，请拨打 995；非紧急情况可联系医生或 NurseFirst 6262 6262。",
+    guidanceStomach: "参考建议：如果腹痛突然且持续不缓解，或伴随呼吸困难、失去意识或大量出血，请拨打 995；其他非紧急情况可联系医生或 NurseFirst 6262 6262。",
+    guidanceDizziness: "参考建议：先坐下或躺下，不要独自行走。若出现呼吸困难、失去意识、严重外伤或中风迹象，请拨打 995；非紧急情况可联系医生或 NurseFirst 6262 6262。",
+    readAdvice: "朗读建议",
+    speechUnsupported: "当前设备暂时无法朗读，请查看屏幕文字。",
+    contactElena: "联系女儿 Elena",
+    contactDavid: "联系儿子 David",
+    contactDavidOption: "儿子 David · 约 3 km",
+    contactDavidLocation: "已授权共享 · 更新于 2 分钟前",
+    contactElenaOption: "女儿 Elena",
+    contactElenaLocation: "未授权位置共享",
+    handleMyself: "暂不联系家属",
+    noFamilyContactConfirmed: "好的，暂不通知家属。参考建议仍保留在上方；情况变化时可以随时点击“需要帮助”。",
     callDone: "已经通知 Elena，她今天会给你打电话。",
-    noteDone: "好的，我先记录。下午会再来问候你。",
+    noteDone: "好的，我先记录。稍后会再来问候你。",
     sleepMine: "昨晚没睡好。",
     sleepAsk: "现在有没有头晕、胸闷或其他不舒服？",
     noSymptom: "没有不舒服",
@@ -122,7 +171,7 @@ const copy = {
     sleepDone: "好的。今天先慢一点，下午我会再问问你。",
     dizzyDone: "请先坐到安全的地方。我已经通知 Elena 尽快联系你。",
     appetiteMine: "今天没胃口。",
-    appetiteAsk: "明白。午餐时愿意拍张照片吗？我可以帮你看看吃得够不够。",
+    appetiteAsk: "明白。吃饭时愿意拍张照片吗？我可以帮你看看吃得够不够。",
     mealAdded: "已上传餐食照片",
     analyzingMeal: "营养助手正在识别菜品、份量和营养…",
     analysisFailed: "暂时无法完成营养分析",
@@ -147,14 +196,10 @@ const copy = {
     moderate: "中等",
     good: "充足",
     helpMine: "我需要帮助。",
-    urgentAsk: "我会陪着你。你现在有紧急危险吗？",
-    urgent: "是的，很紧急",
-    callElena: "请 Elena 联系我",
-    notUrgent: "不紧急",
-    urgentDone: "已向 Elena 发送紧急通知，并附上你授权共享的位置和最新健康信息。",
+    helpProblemAsk: "我在这里陪你。现在遇到了什么问题？你可以直接说，也可以选择下面最接近的情况。",
+    urgent: "跌倒、胸闷或呼吸困难",
     voiceInput: "开始语音输入",
     stopVoice: "结束录音",
-    voiceHint: "点麦克风说话；录音仅用于本次转写",
     listening: "正在听，请说话…",
     transcribing: "正在把语音转成文字…",
     voiceReady: "已识别，请确认文字后点击发送",
@@ -162,17 +207,34 @@ const copy = {
     microphoneError: "无法使用麦克风，请允许麦克风权限后重试。",
     voiceError: "没有听清楚，请再说一次。",
     thinking: "陪伴助手正在回复…",
-    proactiveThinking: "陪伴助手正在结合今早数据和近期记录…",
-    input: "想说什么都可以…",
+    proactiveThinking: "陪伴助手正在分析您的健康数据…",
+    input: "点麦克风说话，或输入文字…",
     defaultReply: "谢谢你告诉我。还有哪里不舒服，或者需要我提醒什么吗？",
-    privacy: "只有经过你同意的更新才会与 Elena 共享",
     userView: "用户端",
     family: "家属端",
     you: "你",
   },
   en: {
     name: "Mdm Tan",
-    presence: "Good morning, I’m here with you",
+    greetings: {
+      morning: "Good morning",
+      afternoon: "Good afternoon",
+      evening: "Good evening",
+    },
+    presenceSuffix: "I’m here with you",
+    mealQuestions: {
+      breakfast: "Have you had breakfast?",
+      lunch: "Have you had lunch?",
+      dinner: "Have you had dinner?",
+    },
+    mealNotYet: {
+      breakfast: "I haven’t had breakfast",
+      lunch: "I haven’t had lunch",
+      dinner: "I haven’t had dinner",
+    },
+    helloHealthContext: "You slept a little less than usual and have not gone for your walk yet.",
+    helloKneePrompt: "How are your knees?",
+    fineAcknowledgement: "Glad to hear it.",
     medicine: "Medicine completed",
     lunch: "Lunch reminder",
     stretch: "Indoor stretch",
@@ -188,22 +250,22 @@ const copy = {
     steps: "Steps · lower",
     summary: "Nothing urgent, but your morning is quieter than usual.",
     companion: "Companion",
-    hello: "Good morning, Mdm Tan. You slept a little less than usual and have not gone for your walk yet.\nHow are your knees? Have you had breakfast?",
     well: "I feel well",
     help: "I need help",
     knee: "My knee hurts",
     poorSleep: "I slept poorly",
     noAppetite: "I have no appetite",
-    breakfastNotYet: "I haven’t had breakfast",
     stomach: "My stomach hurts",
     stomachMine: "My stomach hurts a little.",
     stomachAsk: "Did the stomach discomfort start today, or has it happened repeatedly over the past few days?",
+    stomachSafetyAsk: "I’m here with you. Is the pain severe, or do you have vomiting, fever, a cold sweat, chest tightness, or a hard abdomen?",
+    stomachSafe: "None of those",
+    stomachDanger: "Yes, one of those",
     suggestionBasis: "Suggested from synced data and recent health history",
     fine: "I feel well.",
-    fineNext: "Glad to hear it. Have you had breakfast?",
     ate: "Yes, I ate",
     notYet: "Not yet",
-    uploadMeal: "Upload lunch photo",
+    uploadMeal: "Upload meal photo",
     kneeMine: "My knee hurts a little.",
     kneeAsk: "Did the pain start today, or has it lasted a few days?",
     todayPain: "Started today",
@@ -215,8 +277,23 @@ const copy = {
     painFollow: "I’ve noted it. Would you like Elena to call you today?",
     yesCall: "Yes, please",
     noCall: "Not yet",
+    contactFamilyAsk: "Would you like me to contact a family member now?",
+    guidanceGeneral: "Reference guidance: call 995 for breathlessness, loss of consciousness, excessive bleeding, or major trauma. For non-life-threatening medical guidance, call NurseFirst at 6262 6262.",
+    guidanceKnee: "Reference guidance: stop walking and avoid standing alone. Call 995 if a fall leaves you unable to get up, or if there is breathlessness, loss of consciousness, excessive bleeding, or major trauma. For non-emergency guidance, contact a doctor or NurseFirst at 6262 6262.",
+    guidanceStomach: "Reference guidance: call 995 for sudden abdominal pain that does not subside, or abdominal pain with breathlessness, loss of consciousness, or excessive bleeding. For other non-emergency guidance, contact a doctor or NurseFirst at 6262 6262.",
+    guidanceDizziness: "Reference guidance: sit or lie down and do not walk alone. Call 995 for breathlessness, loss of consciousness, major trauma, or signs of stroke. For non-emergency guidance, contact a doctor or NurseFirst at 6262 6262.",
+    readAdvice: "Read advice aloud",
+    speechUnsupported: "Read-aloud is not available on this device. Please use the on-screen text.",
+    contactElena: "Contact daughter Elena",
+    contactDavid: "Contact son David",
+    contactDavidOption: "Son David · about 3 km away",
+    contactDavidLocation: "Location shared · updated 2 min ago",
+    contactElenaOption: "Daughter Elena",
+    contactElenaLocation: "Location sharing not authorized",
+    handleMyself: "Do not contact family yet",
+    noFamilyContactConfirmed: "Okay. No family member will be notified for now. The reference guidance remains above, and you can tap “I need help” if anything changes.",
     callDone: "Elena has been notified and will call you today.",
-    noteDone: "Okay, I’ve noted it. I’ll check in again this afternoon.",
+    noteDone: "Okay, I’ve noted it. I’ll check in again later.",
     sleepMine: "I did not sleep well.",
     sleepAsk: "Do you feel dizzy, short of breath, or otherwise unwell now?",
     noSymptom: "No other symptoms",
@@ -224,7 +301,7 @@ const copy = {
     sleepDone: "Okay. Take things slowly today. I’ll check again this afternoon.",
     dizzyDone: "Please sit somewhere safe. I’ve asked Elena to contact you soon.",
     appetiteMine: "I do not feel like eating.",
-    appetiteAsk: "Understood. Would you take a photo at lunch? I can help check whether the meal is enough.",
+    appetiteAsk: "Understood. Would you take a photo when you eat? I can help check whether the meal is enough.",
     mealAdded: "Meal photo uploaded",
     analyzingMeal: "The Nutrition Agent is identifying the dish, portion, and nutrients…",
     analysisFailed: "Nutrition analysis could not be completed",
@@ -249,14 +326,10 @@ const copy = {
     moderate: "Moderate",
     good: "Good",
     helpMine: "I need help.",
-    urgentAsk: "I’m here with you. Are you in immediate danger?",
-    urgent: "Yes, urgent",
-    callElena: "Ask Elena to call",
-    notUrgent: "Not urgent",
-    urgentDone: "An urgent alert was sent to Elena with your approved location and latest health update.",
+    helpProblemAsk: "I’m here with you. What is happening now? You can tell me directly or choose the closest option below.",
+    urgent: "Fall, chest tightness, or breathlessness",
     voiceInput: "Start voice input",
     stopVoice: "Stop recording",
-    voiceHint: "Tap the microphone; audio is used only for this transcription",
     listening: "Listening — please speak…",
     transcribing: "Turning your voice into text…",
     voiceReady: "Transcript ready — review it, then tap send",
@@ -264,10 +337,9 @@ const copy = {
     microphoneError: "The microphone is unavailable. Allow microphone access and try again.",
     voiceError: "I did not catch that. Please try again.",
     thinking: "Companion is replying…",
-    proactiveThinking: "Companion is reviewing this morning’s data and recent history…",
-    input: "You can tell me anything…",
+    proactiveThinking: "Companion is analyzing your health data…",
+    input: "Tap the microphone or type…",
     defaultReply: "Thank you for telling me. Is anything else uncomfortable, or is there something you want me to remind you about?",
-    privacy: "Only the updates you approve are shared with Elena",
     userView: "User",
     family: "Family",
     you: "You",
@@ -277,10 +349,15 @@ const copy = {
 const careProfile = {
   recurringConcerns: ["knee"] as Array<"knee" | "stomach">,
   sleepBelowBaseline: true,
-  breakfastUnconfirmed: true,
+  mealUnconfirmed: true,
 };
 
-let nextMessageId = 10;
+function getTimeContext(hour: number): TimeContext {
+  if (hour < 11) return { dayPeriod: "morning", mealPeriod: "breakfast" };
+  if (hour < 16) return { dayPeriod: "afternoon", mealPeriod: "lunch" };
+  if (hour < 18) return { dayPeriod: "afternoon", mealPeriod: "dinner" };
+  return { dayPeriod: "evening", mealPeriod: "dinner" };
+}
 
 function initialMessages(): Message[] {
   return [{ id: 1, role: "watch", tone: "status", watchSync: true }];
@@ -289,12 +366,18 @@ function initialMessages(): Message[] {
 export function ParentHealthChat() {
   const [language, setLanguage] = useState<Language>("zh");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const nextMessageIdRef = useRef(Math.max(9, ...messages.map((message) => message.id)) + 1);
   const [step, setStep] = useState<Step>("initial");
   const [draft, setDraft] = useState("");
   const [voiceState, setVoiceState] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
+  const [timeContext, setTimeContext] = useState<TimeContext>({
+    dayPeriod: "morning",
+    mealPeriod: "breakfast",
+  });
+  const [pendingEscalationKind, setPendingEscalationKind] = useState<EscalationKind | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -303,8 +386,16 @@ export function ParentHealthChat() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const voiceTimeoutRef = useRef<number | null>(null);
-  const escalationTimersRef = useRef<number[]>([]);
   const t = copy[language];
+  const greeting = t.greetings[timeContext.dayPeriod];
+  const mealQuestion = t.mealQuestions[timeContext.mealPeriod];
+  const mealNotYet = t.mealNotYet[timeContext.mealPeriod];
+  const proactiveHello = language === "zh"
+    ? `${greeting}，${t.name}。${t.helloHealthContext}\n${t.helloKneePrompt}${mealQuestion}`
+    : `${greeting}, ${t.name}. ${t.helloHealthContext}\n${t.helloKneePrompt} ${mealQuestion}`;
+  const presence = language === "zh"
+    ? `${greeting}，${t.presenceSuffix}`
+    : `${greeting}, ${t.presenceSuffix}`;
   const isWatchSynced = messages.some((message) => message.health);
   const isProactiveQuestionReady = messages.some(
     (message) => message.id === 2 && Boolean(message.text),
@@ -315,40 +406,105 @@ export function ParentHealthChat() {
   }, [messages]);
 
   useEffect(() => {
+    setTimeContext(getTimeContext(new Date().getHours()));
+  }, []);
+
+  useEffect(() => {
+    const syncEscalation = () => {
+      const currentEscalation = readCareEscalation();
+      if (!currentEscalation) return;
+      setMessages((current) =>
+        current.map((message) =>
+          message.escalation?.id === currentEscalation.id
+            ? { ...message, escalation: currentEscalation }
+            : message,
+        ),
+      );
+    };
+    window.addEventListener("storage", syncEscalation);
+    window.addEventListener(ESCALATION_EVENT, syncEscalation);
+    return () => {
+      window.removeEventListener("storage", syncEscalation);
+      window.removeEventListener(ESCALATION_EVENT, syncEscalation);
+    };
+  }, []);
+
+  useEffect(() => {
     const objectUrls = objectUrlsRef.current;
-    const escalationTimers = escalationTimersRef.current;
     return () => {
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
       watchSyncTimersRef.current.forEach((timer) => window.clearTimeout(timer));
       if (voiceTimeoutRef.current !== null) window.clearTimeout(voiceTimeoutRef.current);
-      escalationTimers.forEach((timer) => window.clearTimeout(timer));
       if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     };
   }, []);
 
   const addMessage = (message: Omit<Message, "id">) => {
-    setMessages((current) => [...current, { ...message, id: nextMessageId++ }]);
+    const id = nextMessageIdRef.current++;
+    setMessages((current) => [...current, { ...message, id }]);
   };
 
-  const advanceEscalation = (id: string, stage: EscalationStage) => {
-    setMessages((current) =>
-      current.map((message) => {
-        if (message.escalation?.id !== id) return message;
-        const escalation = { ...message.escalation, stage };
-        saveCareEscalation(escalation);
-        return { ...message, escalation };
-      }),
+  const guidanceFor = (kind: GuidanceKind) => {
+    if (kind === "knee") return t.guidanceKnee;
+    if (kind === "stomach") return t.guidanceStomach;
+    if (kind === "dizziness") return t.guidanceDizziness;
+    return t.guidanceGeneral;
+  };
+
+  const offerGuidanceAndFamilyChoice = (
+    guidanceKind: GuidanceKind,
+    escalationKind: EscalationKind,
+  ) => {
+    addMessage({
+      role: "assistant",
+      tone: "alert",
+      text: `${guidanceFor(guidanceKind)}\n${t.contactFamilyAsk}`,
+      readAloud: true,
+    });
+    setPendingEscalationKind(escalationKind);
+    setStep("family-contact-choice");
+  };
+
+  const readMessageAloud = (text: string) => {
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+      setVoiceState(t.speechUnsupported);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language === "zh" ? "zh-CN" : "en-SG";
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startEscalation = (kind: EscalationKind, initialContact: CareContact = "elena") => {
+    const escalation = {
+      ...createCareEscalation(kind, undefined, initialContact),
+      stage: "whatsapp_draft_opened" as const,
+    };
+    window.open(
+      careWhatsAppHref(initialContact, kind, language),
+      "_blank",
+      "noopener,noreferrer",
     );
+    addMessage({ role: "assistant", tone: "alert", escalation });
+    setStep("done");
   };
 
-  const startEscalation = (kind: EscalationKind) => {
-    const escalation = createCareEscalation(kind);
-    saveCareEscalation(escalation);
-    addMessage({ role: "assistant", tone: "alert", escalation });
-    escalationTimersRef.current.push(
-      window.setTimeout(() => advanceEscalation(escalation.id, "primary_multichannel"), 1200),
-      window.setTimeout(() => advanceEscalation(escalation.id, "backup_acknowledged"), 2800),
+  const confirmWhatsAppSent = (escalation: CareEscalation) => {
+    const updated: CareEscalation = {
+      ...escalation,
+      stage: "whatsapp_send_confirmed",
+    };
+    saveCareEscalation(updated);
+    setMessages((current) =>
+      current.map((message) =>
+        message.escalation?.id === escalation.id
+          ? { ...message, escalation: updated }
+          : message,
+      ),
     );
   };
 
@@ -357,8 +513,11 @@ export function ParentHealthChat() {
     watchSyncTimersRef.current = [];
     setLanguage(nextLanguage);
     setMessages(initialMessages());
+    nextMessageIdRef.current = 10;
     setStep("initial");
+    setPendingEscalationKind(null);
     setVoiceState("");
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   };
 
   const syncAppleWatch = () => {
@@ -397,7 +556,7 @@ export function ParentHealthChat() {
         const assistantQuestion: Message = {
           id: 2,
           role: "assistant",
-          text: t.hello,
+          text: proactiveHello,
         };
         return current.some((message) => message.id === 2)
           ? current.map((message) => (message.id === 2 ? assistantQuestion : message))
@@ -426,8 +585,8 @@ export function ParentHealthChat() {
   const handleAction = (action: string) => {
     if (action === "well") {
       addMessage({ role: "user", text: t.fine });
-      addMessage({ role: "assistant", text: t.fineNext });
-      setStep("breakfast");
+      addMessage({ role: "assistant", text: `${t.fineAcknowledgement}${language === "zh" ? "" : " "}${mealQuestion}` });
+      setStep("meal-check");
       return;
     }
     if (action === "knee") {
@@ -438,7 +597,24 @@ export function ParentHealthChat() {
     }
     if (action === "stomach") {
       addMessage({ role: "user", text: t.stomachMine });
+      addMessage({ role: "assistant", text: t.stomachSafetyAsk });
+      setStep("stomach-safety");
+      return;
+    }
+    if (action === "stomach-safe") {
+      addMessage({ role: "user", text: t.stomachSafe });
       addMessage({ role: "assistant", text: t.stomachAsk });
+      setStep("stomach-duration");
+      return;
+    }
+    if (action === "stomach-danger") {
+      addMessage({ role: "user", text: t.stomachDanger });
+      offerGuidanceAndFamilyChoice("stomach", "urgent");
+      return;
+    }
+    if (action === "stomach-today" || action === "stomach-recurring") {
+      addMessage({ role: "user", text: action === "stomach-today" ? t.todayPain : t.daysPain });
+      addMessage({ role: "assistant", text: t.noteDone });
       setStep("done");
       return;
     }
@@ -456,21 +632,12 @@ export function ParentHealthChat() {
     }
     if (action === "knee-danger") {
       addMessage({ role: "user", text: t.kneeDanger });
-      addMessage({
-        role: "assistant",
-        tone: "alert",
-        text: language === "zh"
-          ? "请先坐在安全的地方。照护升级已启动。"
-          : "Please sit somewhere safe. Care escalation has started.",
-      });
-      startEscalation("urgent");
-      setStep("done");
+      offerGuidanceAndFamilyChoice("knee", "urgent");
       return;
     }
     if (action === "severe") {
       addMessage({ role: "user", text: t.severe });
-      startEscalation("urgent");
-      setStep("done");
+      offerGuidanceAndFamilyChoice("knee", "symptom");
       return;
     }
     if (action === "sleep") {
@@ -482,14 +649,13 @@ export function ParentHealthChat() {
     if (action === "no-symptom" || action === "dizzy") {
       addMessage({ role: "user", text: action === "dizzy" ? t.dizzy : t.noSymptom });
       if (action === "dizzy") {
-        addMessage({ role: "assistant", tone: "alert", text: language === "zh" ? "请先坐到安全的地方。照护升级已启动。" : "Please sit somewhere safe. Care escalation has started." });
-        startEscalation("urgent");
+        offerGuidanceAndFamilyChoice("dizziness", "urgent");
       } else addMessage({ role: "assistant", text: t.sleepDone });
-      setStep("done");
+      if (action !== "dizzy") setStep("done");
       return;
     }
     if (action === "appetite" || action === "not-yet") {
-      addMessage({ role: "user", text: action === "appetite" ? t.appetiteMine : t.breakfastNotYet });
+      addMessage({ role: "user", text: action === "appetite" ? t.appetiteMine : mealNotYet });
       addMessage({ role: "assistant", text: t.appetiteAsk });
       setStep("meal-photo");
       return;
@@ -514,27 +680,40 @@ export function ParentHealthChat() {
     }
     if (action === "help") {
       addMessage({ role: "user", text: t.helpMine });
-      addMessage({ role: "assistant", tone: "alert", text: t.urgentAsk });
-      setStep("help-urgent");
+      addMessage({ role: "assistant", text: t.helpProblemAsk });
+      setStep("help-problem");
+      return;
+    }
+    if (action === "dizzy-from-help") {
+      addMessage({ role: "user", text: t.dizzy });
+      offerGuidanceAndFamilyChoice("dizziness", "urgent");
       return;
     }
     if (action === "urgent") {
       addMessage({ role: "user", text: t.urgent });
-      addMessage({ role: "assistant", tone: "alert", text: language === "zh" ? "请留在安全位置。照护升级已启动。" : "Stay somewhere safe. Care escalation has started." });
-      startEscalation("urgent");
-      setStep("done");
+      offerGuidanceAndFamilyChoice("general", "urgent");
       return;
     }
-    if (action === "call-elena") {
-      addMessage({ role: "user", text: t.callElena });
-      startEscalation("symptom");
-      setStep("done");
+    if (action === "contact-elena") {
+      const escalationKind = pendingEscalationKind ?? "symptom";
+      addMessage({ role: "user", text: t.contactElena });
+      setPendingEscalationKind(null);
+      startEscalation(escalationKind, "elena");
       return;
     }
-    if (action === "not-urgent") {
-      addMessage({ role: "user", text: t.notUrgent });
-      addMessage({ role: "assistant", text: t.defaultReply });
-      setStep("initial");
+    if (action === "contact-david") {
+      const escalationKind = pendingEscalationKind ?? "symptom";
+      addMessage({ role: "user", text: t.contactDavid });
+      setPendingEscalationKind(null);
+      startEscalation(escalationKind, "david");
+      return;
+    }
+    if (action === "advice-only") {
+      addMessage({ role: "user", text: t.handleMyself });
+      addMessage({ role: "assistant", text: t.noFamilyContactConfirmed });
+      setPendingEscalationKind(null);
+      setStep("done");
+      return;
     }
   };
 
@@ -548,13 +727,23 @@ export function ParentHealthChat() {
               : { id: "stomach", label: t.stomach },
           ),
           ...(careProfile.sleepBelowBaseline ? [{ id: "sleep", label: t.poorSleep }] : []),
-          ...(careProfile.breakfastUnconfirmed ? [{ id: "not-yet", label: t.breakfastNotYet }] : []),
+          ...(careProfile.mealUnconfirmed ? [{ id: "not-yet", label: mealNotYet }] : []),
         ];
-      case "breakfast":
+      case "meal-check":
         return [
           { id: "ate", label: t.ate },
           { id: "not-yet", label: t.notYet },
           { id: "upload", label: t.uploadMeal },
+        ];
+      case "stomach-safety":
+        return [
+          { id: "stomach-safe", label: t.stomachSafe },
+          { id: "stomach-danger", label: t.stomachDanger, important: true },
+        ];
+      case "stomach-duration":
+        return [
+          { id: "stomach-today", label: t.todayPain },
+          { id: "stomach-recurring", label: t.daysPain },
         ];
       case "knee-duration":
         return [
@@ -572,6 +761,21 @@ export function ParentHealthChat() {
           { id: "yes-call", label: t.yesCall, important: true },
           { id: "no-call", label: t.noCall },
         ];
+      case "family-contact-choice":
+        return [
+          {
+            id: "contact-david",
+            label: t.contactDavidOption,
+            detail: t.contactDavidLocation,
+            important: true,
+          },
+          {
+            id: "contact-elena",
+            label: t.contactElenaOption,
+            detail: t.contactElenaLocation,
+          },
+          { id: "advice-only", label: t.handleMyself },
+        ];
       case "sleep-symptoms":
         return [
           { id: "no-symptom", label: t.noSymptom },
@@ -579,11 +783,12 @@ export function ParentHealthChat() {
         ];
       case "meal-photo":
         return [{ id: "upload", label: t.uploadMeal, important: true }];
-      case "help-urgent":
+      case "help-problem":
         return [
+          { id: "stomach", label: t.stomach },
+          { id: "knee", label: t.knee },
+          { id: "dizzy-from-help", label: t.dizzy },
           { id: "urgent", label: t.urgent, important: true },
-          { id: "call-elena", label: t.callElena },
-          { id: "not-urgent", label: t.notUrgent },
         ];
       default:
         return [];
@@ -592,13 +797,38 @@ export function ParentHealthChat() {
 
   const processText = async (text: string) => {
     const normalized = text.toLowerCase();
-    if (/帮助|help|紧急|urgent|胸痛|胸闷|呼吸困难|喘不过气|跌倒|摔倒|晕倒|迷路|chest pain|can'?t breathe|fell|fall|faint|lost/.test(normalized)) {
-      addMessage({ role: "assistant", tone: "alert", text: t.urgentAsk });
-      setStep("help-urgent");
+    if (/胸痛|胸闷|呼吸困难|喘不过气|跌倒|摔倒|晕倒|迷路|chest pain|chest tightness|can'?t breathe|breathless|fell|fall|faint|lost/.test(normalized)) {
+      offerGuidanceAndFamilyChoice("general", "urgent");
+      return;
+    }
+    if (/^\s*(帮助|需要帮助|help|i need help)\s*[。.!！]?\s*$/.test(normalized)) {
+      addMessage({ role: "assistant", text: t.helpProblemAsk });
+      setStep("help-problem");
+      return;
+    }
+    if (/肚子|腹痛|胃痛|stomach|abdominal|tummy/.test(normalized)) {
+      addMessage({ role: "assistant", text: t.stomachSafetyAsk });
+      setStep("stomach-safety");
+      return;
+    }
+    if (/膝|knee/.test(normalized)) {
+      addMessage({ role: "assistant", text: t.kneeAsk });
+      setStep("knee-duration");
+      return;
+    }
+    if (/没睡好|睡不着|失眠|睡眠|poor sleep|didn'?t sleep|insomnia/.test(normalized)) {
+      addMessage({ role: "assistant", text: t.sleepAsk });
+      setStep("sleep-symptoms");
+      return;
+    }
+    if (/没胃口|不想吃|no appetite|don'?t want to eat/.test(normalized)) {
+      addMessage({ role: "assistant", text: t.appetiteAsk });
+      setStep("meal-photo");
       return;
     }
 
-    const replyMessageId = nextMessageId++;
+    setStep("done");
+    const replyMessageId = nextMessageIdRef.current++;
     setIsReplying(true);
     setMessages((current) => [...current, { id: replyMessageId, role: "assistant", tone: "status", replying: true }]);
 
@@ -623,7 +853,7 @@ export function ParentHealthChat() {
       setMessages((current) => current.map((message) => message.id === replyMessageId ? { ...message, replying: false, tone: "normal", text: t.defaultReply } : message));
     } finally {
       setIsReplying(false);
-      setStep("initial");
+      setStep("done");
     }
   };
 
@@ -659,8 +889,8 @@ export function ParentHealthChat() {
     setVoiceState("");
     const imageUrl = URL.createObjectURL(file);
     objectUrlsRef.current.push(imageUrl);
-    const imageMessageId = nextMessageId++;
-    const analysisMessageId = nextMessageId++;
+    const imageMessageId = nextMessageIdRef.current++;
+    const analysisMessageId = nextMessageIdRef.current++;
     setMessages((current) => [
       ...current,
       { id: imageMessageId, role: "user", imageUrl, fileName: file.name },
@@ -811,7 +1041,7 @@ export function ParentHealthChat() {
           <div className="profile-avatar" aria-hidden="true">陈</div>
           <div>
             <strong>{t.name}</strong>
-            <span className="presence"><i />{t.presence}</span>
+            <span className="presence"><i />{presence}</span>
           </div>
         </div>
         <div className="language-switch" aria-label="Language">
@@ -906,7 +1136,12 @@ export function ParentHealthChat() {
                   <button onClick={() => fileRef.current?.click()}>{t.retryPhoto}</button>
                 </div>
               ) : message.escalation ? (
-                <CareEscalationCard escalation={message.escalation} language={language} audience="parent" />
+                <CareEscalationCard
+                  escalation={message.escalation}
+                  language={language}
+                  audience="parent"
+                  onConfirmWhatsAppSent={() => confirmWhatsAppSent(message.escalation!)}
+                />
               ) : message.followUpConfirmation ? (
                 <FollowUpConfirmationCard language={language} />
               ) : message.health ? (
@@ -926,7 +1161,21 @@ export function ParentHealthChat() {
                   <span>{t.mealAdded} · {message.fileName}</span>
                 </div>
               ) : (
-                message.text?.split("\n").map((line) => <p key={line}>{line}</p>)
+                <>
+                  {message.text?.split("\n").map((line) => <p key={line}>{line}</p>)}
+                  {message.readAloud && message.text && (
+                    <button
+                      type="button"
+                      className="advice-listen-button"
+                      onClick={() => readMessageAloud(message.text ?? "")}
+                      aria-label={t.readAdvice}
+                      title={t.readAdvice}
+                    >
+                      <Volume2 size={17} />
+                      <span>{t.readAdvice}</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </article>
@@ -934,12 +1183,22 @@ export function ParentHealthChat() {
         <div ref={endRef} />
       </section>
 
-      {isWatchSynced && isProactiveQuestionReady && quickActions.length > 0 && (
+      {quickActions.length > 0 && (step !== "initial" || (isWatchSynced && isProactiveQuestionReady)) && (
         <div className="quick-action-area">
           {step === "initial" && <small className="quick-action-basis"><Sparkles size={14} />{t.suggestionBasis}</small>}
           <div className="quick-actions" aria-label="Suggested replies">
             {quickActions.map((action) => (
-              <button key={action.id} className={action.important ? "important" : ""} onClick={() => handleAction(action.id)}>{action.label}</button>
+              <button
+                key={action.id}
+                className={[
+                  action.important ? "important" : "",
+                  action.detail ? "with-detail" : "",
+                ].filter(Boolean).join(" ")}
+                onClick={() => handleAction(action.id)}
+              >
+                <span>{action.label}</span>
+                {action.detail && <small>{action.detail}</small>}
+              </button>
             ))}
           </div>
         </div>
@@ -966,8 +1225,7 @@ export function ParentHealthChat() {
           <button className="icon-button" onClick={() => fileRef.current?.click()} aria-label={t.uploadMeal}><Camera size={21} /></button>
           <input ref={fileRef} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" onChange={handlePhoto} />
         </div>
-        <div className={`voice-state ${isListening || isTranscribing ? "active" : ""}`} role="status">{voiceState || t.voiceHint}</div>
-        <div className="privacy-note"><CheckCircle2 size={15} />{t.privacy}</div>
+        {voiceState && <div className={`voice-state ${isListening || isTranscribing ? "active" : ""}`} role="status">{voiceState}</div>}
       </footer>
     </section>
   );
