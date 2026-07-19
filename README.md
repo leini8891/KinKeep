@@ -17,14 +17,13 @@ _Agents own the execution. Families retain judgment and control._
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 
 [![OpenAI Build Week](https://img.shields.io/badge/OpenAI_Build_Week-2026-111111?logo=openai&logoColor=white)](https://openai.devpost.com/)
-[![Project origin](https://img.shields.io/badge/Origin-BUIDL__QUESTS_2026-E8A13D)](https://openarena.to/en/events/buidl-quests-2026)
 [![Languages](https://img.shields.io/badge/Bilingual-English_·_简体中文-7FA98F)](#)
 [![Non-diagnostic](https://img.shields.io/badge/⚕️-Non--diagnostic_·_synthetic_demo_data-64748B)](#)
 
 </div>
 
 > [!IMPORTANT]
-> KinKeep is **not a medical diagnostic tool**. All health signals, calls, and care actions in this demo are deterministic synthetic fixtures. Care branching, escalation stages and approval gating are **auditable code — never model output**. No real caregiver, clinic, or emergency service is contacted.
+> KinKeep is **not a medical diagnostic tool**. All health signals and care scenarios in this demo use synthetic fixtures. Care branching, escalation stages and approval gating are **auditable code — never model output**. No clinic or emergency service is contacted. Family messages are never sent automatically: KinKeep can open a pre-filled WhatsApp handoff, but the user must choose the recipient and press Send.
 
 ---
 
@@ -42,9 +41,9 @@ baseline — never one number      answers, never initiates      humans keep the
 
 The elder gets a companion that talks like a person. The family gets silence when all is well — and a completed first round of checks plus **one clear decision** when it is not.
 
-## 🧭 Project evolution and OpenAI Build Week scope
+## 🧭 OpenAI Build Week scope and project history
 
-KinKeep is an existing project that began at **BUIDL_QUESTS 2026** on July 12. OpenAI Build Week explicitly allows builders to extend an existing project, so this repository preserves a clear before-and-after boundary instead of presenting the whole product as new.
+KinKeep predates OpenAI Build Week: an earlier prototype was created during **BUIDL_QUESTS 2026**, which has now concluded. The current submission and development focus is **OpenAI Build Week 2026**. Because Build Week allows builders to extend an existing project, this repository preserves a clear before-and-after boundary instead of presenting the whole product as new.
 
 ### What existed before Build Week
 
@@ -69,10 +68,27 @@ I used **Codex** to implement, refactor, debug, test, and prepare the working de
 | Evidence | Reference |
 |---|---|
 | Last commit before OpenAI Build Week opened | [`10970be`](https://github.com/leini8891/KinKeep/commit/10970be52e575f86bd9968462caf159817dd2c31) |
-| Pushed Build Week Care Episode Loop increment | [`d1d1c74`](https://github.com/leini8891/KinKeep/commit/d1d1c746238d13c71ec03a9dedaa0f45c3770e8c) |
-| Full Build Week diff (updates with the final `main` push) | [`10970be...main`](https://github.com/leini8891/KinKeep/compare/10970be52e575f86bd9968462caf159817dd2c31...main) |
-| Original BUIDL_QUESTS judged snapshot | [`judged-2026-07-12`](https://github.com/leini8891/KinKeep/releases/tag/judged-2026-07-12) |
-| Original build-day timeline | [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md) |
+| Core Build Week Care Episode Loop | [`d1d1c74`](https://github.com/leini8891/KinKeep/commit/d1d1c746238d13c71ec03a9dedaa0f45c3770e8c) |
+| Consent-led contact refinement and expanded tests | [`6cdac5a`](https://github.com/leini8891/KinKeep/commit/6cdac5a159bd592c1c6d0bd9472e3a8ac962b59f) |
+| Current final Build Week source on `main` | [`5ca6f83`](https://github.com/leini8891/KinKeep/commit/5ca6f83585671bf5586228a1ee66ece301963011) — merged through [PR #2](https://github.com/leini8891/KinKeep/pull/2) |
+| Full Build Week diff | [`10970be...main`](https://github.com/leini8891/KinKeep/compare/10970be52e575f86bd9968462caf159817dd2c31...main) |
+| Archived pre–Build Week prototype snapshot | [`judged-2026-07-12`](https://github.com/leini8891/KinKeep/releases/tag/judged-2026-07-12) |
+| Archived prototype build timeline | [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md) |
+
+The current `main` includes the final Build Week source through [PR #2](https://github.com/leini8891/KinKeep/pull/2); the history above separates it from the pre–Build Week baseline.
+
+## ▶️ Recommended 3-minute demo route
+
+Keep the story on one completed care episode:
+
+1. On `/`, sync the simulated health summary.
+2. Choose **My knee hurts → A few days → None of those**.
+3. Show that KinKeep asks permission before contacting family, then choose **Yes, please**.
+4. Switch to `/family` and open **Today's follow-up**.
+5. Show the four evidence items, the visible uncertainty, and the three care options.
+6. Approve **Ask family to call** and show the generated owner, deadlines, follow-up, and escalation rule.
+
+Voice, meal-photo analysis, WhatsApp handoff, and wandering monitoring are supporting capabilities. Mention them briefly; do not spend the core three minutes demonstrating them.
 
 ## ✨ One product, two surfaces
 
@@ -104,7 +120,7 @@ I used **Codex** to implement, refactor, debug, test, and prepare the working de
 
 ## 🛡️ The sovereignty model
 
-The hackathon theme is *Agents & Sovereignty*. Most agent demos show autonomy; KinKeep shows **where autonomy must stop**.
+Most agent demos show how far autonomy can go. KinKeep focuses on **where autonomy must stop** in family care.
 
 | Agents do autonomously | Pauses for a human |
 |---|---|
@@ -162,8 +178,8 @@ npm test     # production build + server-rendered assertions for both surfaces
 ## 📚 Documentation and evidence
 
 - OpenAI Build Week scope and evidence: this README and the [`10970be...main`](https://github.com/leini8891/KinKeep/compare/10970be52e575f86bd9968462caf159817dd2c31...main) diff
-- Original BUIDL_QUESTS timeline: [docs/BUILD_LOG.md](docs/BUILD_LOG.md)
-- Product requirements and safety architecture: [docs/PRD_KinKeep_OPC.md](docs/PRD_KinKeep_OPC.md)
+- Three-minute feature pitch and click script: [docs/OPENAI_BUILD_WEEK_3MIN_PITCH.md](docs/OPENAI_BUILD_WEEK_3MIN_PITCH.md)
+- Archived pre–Build Week prototype timeline: [docs/BUILD_LOG.md](docs/BUILD_LOG.md)
 
 ## 🗺️ Roadmap
 
@@ -174,8 +190,6 @@ Real mobile push & notification ladder → real wearable ingestion (HealthKit / 
 <div align="center">
 
 **OpenAI Build Week 2026 · built with Codex + GPT-5.6**
-
-_Project origin: BUIDL_QUESTS 2026 · OPC / Super Individuals_
 
 _Synthetic demo data · Non-diagnostic · Consent-first · Humans decide high-impact actions_
 
