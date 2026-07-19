@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KinKeep - OpenAI Build Week Pitch Deck</title>
+  <style>
+    /* Premium Color Palette & System Fonts */
+    :root {
+      --bg-cream: #FAF6EF;
+      --primary-teal: #0F4C4C;
+      --secondary-teal-light: #166060;
+      --sage-green: #7FA98F;
+      --sage-light: #F0F6F2;
+      --accent-amber: #E8A13D;
+      --alert-red: #C4553B;
+      --text-dark: #2D3A3A;
+      --card-bg: #FFFFFF;
+      --border-color: #E6E0D5;
+      --subtitle-bg: rgba(15, 76, 76, 0.95);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #111;
+      color: var(--text-dark);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* 16:9 Presentation Frame */
+    .deck-container {
+      width: 1280px;
+      height: 720px;
+      background-color: var(--bg-cream);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Slides Container */
+    .slides-wrapper {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 60px 80px 140px 80px; /* Leave space at bottom for subtitles */
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+      transform: scale(0.98);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+    }
+
+    /* Subtitles (Chinese Voiceover) */
+    .subtitle-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 110px;
+      background-color: var(--subtitle-bg);
+      color: #FFF;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px 80px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 400;
+      line-height: 1.5;
+      border-top: 4px solid var(--accent-amber);
+      z-index: 100;
+    }
+
+    .subtitle-text {
+      max-width: 1000px;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Header Styling */
+    .slide-header {
+      margin-bottom: 30px;
+    }
+
+    .slide-tag {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--sage-green);
+      margin-bottom: 8px;
+      display: inline-block;
+    }
+
+    .slide-title {
+      font-size: 42px;
+      font-weight: 800;
+      color: var(--primary-teal);
+      line-height: 1.2;
+    }
+
+    /* Content Layouts */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      gap: 50px;
+      align-items: center;
+    }
+
+    /* Slide-specific components */
+    /* Cover Slide */
+    .cover-layout {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 40px;
+    }
+
+    .brand-title {
+      font-size: 84px;
+      font-weight: 900;
+      color: var(--primary-teal);
+      letter-spacing: -2px;
+      margin-bottom: 10px;
+    }
+
+    .brand-tagline {
+      font-size: 32px;
+      font-weight: 500;
+      color: var(--secondary-teal-light);
+      margin-bottom: 40px;
+    }
+
+    .brand-desc {
+      font-size: 20px;
+      color: var(--text-dark);
+      max-width: 650px;
+      line-height: 1.6;
+      border-left: 4px solid var(--sage-green);
+      padding-left: 20px;
+      margin-bottom: 40px;
+    }
+
+    .cover-meta {
+      font-size: 14px;
+      color: #666;
+      display: flex;
+      gap: 30px;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Slide 2 (Pain Points) */
+    .pain-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      width: 100%;
+    }
+
+    .pain-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.02);
+    }
+
+    .pain-card.left {
+      border-left: 5px solid var(--alert-red);
+    }
+
+    .pain-card.right {
+      border-left: 5px solid var(--accent-amber);
+    }
+
+    .card-title-lg {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary-teal);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pain-list {
+      list-style-type: none;
+    }
+
+    .pain-list li {
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .pain-list li::before {
+      content: "•";
+      color: var(--alert-red);
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .pain-right-bullets li::before {
+      color: var(--accent-amber);
+    }
+
+    /* Slide 3 (Loop) */
+    .loop-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      width: 100%;
+      position: relative;
+    }
+
+    .loop-flow::after {
+      content: "";
+      position: absolute;
+      top: 50px;
+      left: 10%;
+      width: 80%;
+      height: 2px;
+      background: repeating-linear-gradient(to right, var(--sage-green), var(--sage-green) 10px, transparent 10px, transparent 20px);
+      z-index: 1;
+    }
+
+    .loop-step {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.02);
+      transition: transform 0.3s;
+    }
+
+    .loop-step:hover {
+      transform: translateY(-5px);
+    }
+
+    .step-num {
+      width: 50px;
+      height: 50px;
+      background-color: var(--primary-teal);
+      color: #FFF;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 auto 20px auto;
+      border: 4px solid var(--bg-cream);
+    }
+
+    .step-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary-teal);
+      margin-bottom: 10px;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    /* Slide 4 (Interactive Mockup Showcase) */
+    .mockup-container {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      height: 380px;
+      gap: 30px;
+    }
+
+    .mock-phone {
+      width: 290px;
+      height: 380px;
+      background-color: #000;
+      border-radius: 36px;
+      border: 8px solid #222;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phone-bar {
+      height: 24px;
+      background-color: #111;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .phone-notch {
+      width: 110px;
+      height: 14px;
+      background-color: #000;
+      border-bottom-left-radius: 10px;
+      border-bottom-right-radius: 10px;
+    }
+
+    .phone-screen {
+      flex: 1;
+      background-color: var(--bg-cream);
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      overflow: hidden;
+      font-size: 12px;
+    }
+
+    .screen-header {
+      font-weight: 700;
+      color: var(--primary-teal);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .chat-bubble {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      line-height: 1.4;
+      animation: bubbleIn 0.4s ease-out;
+    }
+
+    .bubble-bot {
+      background-color: var(--sage-light);
+      color: var(--primary-teal);
+      border-bottom-left-radius: 2px;
+      align-self: flex-start;
+    }
+
+    .bubble-user {
+      background-color: var(--primary-teal);
+      color: #FFF;
+      border-bottom-right-radius: 2px;
+      align-self: flex-end;
+    }
+
+    .watch-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .watch-icon {
+      font-size: 20px;
+    }
+
+    .watch-details {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-choices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      justify-content: flex-end;
+    }
+
+    .choice-btn {
+      background-color: #FFF;
+      border: 1px solid var(--sage-green);
+      color: var(--primary-teal);
+      border-radius: 16px;
+      padding: 4px 10px;
+      font-weight: 600;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .choice-btn.selected {
+      background-color: var(--primary-teal);
+      color: #FFF;
+      border-color: var(--primary-teal);
+    }
+
+    /* Family surface screen (mock-tablet-like or wide phone) */
+    .mock-family-screen {
+      width: 480px;
+      height: 380px;
+      background-color: #FFF;
+      border-radius: 16px;
+      border: 8px solid #222;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .family-header {
+      background-color: var(--primary-teal);
+      color: #FFF;
+      padding: 12px 20px;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .family-body {
+      flex: 1;
+      background-color: var(--bg-cream);
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .alert-banner {
+      background-color: #FFF;
+      border-left: 5px solid var(--accent-amber);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+      display: none; /* Initially hidden, triggers during animation */
+      animation: slideIn 0.5s ease-out forwards;
+    }
+
+    .alert-header {
+      font-weight: 700;
+      color: var(--alert-red);
+      font-size: 14px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .alert-bullets {
+      list-style: none;
+      font-size: 12px;
+      color: #444;
+      margin-bottom: 10px;
+    }
+
+    .alert-bullets li {
+      margin-bottom: 4px;
+    }
+
+    .approval-box {
+      background-color: var(--sage-light);
+      border: 1px solid var(--sage-green);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .approval-btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .approve-btn {
+      flex: 1;
+      background-color: var(--accent-amber);
+      color: white;
+      border: none;
+      padding: 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .decline-btn {
+      flex: 1;
+      background-color: #FFF;
+      border: 1px solid var(--border-color);
+      color: #666;
+      padding: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .audit-trail {
+      font-size: 11px;
+      color: #777;
+      border-top: 1px solid var(--border-color);
+      padding-top: 8px;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .audit-entry {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    .status-normal {
+      background-color: #FFF;
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .status-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary-teal);
+    }
+
+    .status-green-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: var(--sage-green);
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    /* Keyframes */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes bubbleIn {
+      from { transform: scale(0.9) translateY(10px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    /* Slide 5 (Sovereignty) */
+    .sov-layout {
+      display: flex;
+      width: 100%;
+      gap: 40px;
+    }
+
+    .sov-left {
+      flex: 1.2;
+    }
+
+    .sov-right {
+      flex: 0.8;
+      background-color: var(--primary-teal);
+      border-radius: 12px;
+      padding: 30px;
+      color: #FFF;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .sov-quote {
+      font-size: 20px;
+      font-style: italic;
+      color: var(--sage-green);
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+
+    .sov-quote-author {
+      font-size: 14px;
+      color: #FFF;
+      opacity: 0.7;
+    }
+
+    .sov-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .sov-table th, .sov-table td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sov-table th {
+      color: var(--primary-teal);
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .sov-table td {
+      font-size: 16px;
+      vertical-align: top;
+      line-height: 1.5;
+    }
+
+    .badge-agent {
+      background-color: var(--sage-light);
+      color: var(--primary-teal);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .badge-human {
+      background-color: rgba(232, 161, 61, 0.15);
+      color: var(--accent-amber);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Slide 6 (Innovation & Build Proof) */
+    .innov-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 30px;
+      width: 100%;
+    }
+
+    .timeline-container {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.02);
+    }
+
+    .timeline-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-teal);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 20px;
+      border-left: 2px solid var(--sage-green);
+    }
+
+    .timeline-event {
+      position: relative;
+      margin-bottom: 15px;
+    }
+
+    .timeline-event::before {
+      content: "";
+      position: absolute;
+      left: -26px;
+      top: 4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--primary-teal);
+      border: 2px solid white;
+    }
+
+    .time-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sage-green);
+      margin-right: 10px;
+    }
+
+    .event-title {
+      font-weight: 600;
+      color: var(--text-dark);
+      font-size: 14px;
+    }
+
+    .innov-list {
+      list-style: none;
+    }
+
+    .innov-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+    }
+
+    .innov-item-title {
+      font-weight: 700;
+      color: var(--primary-teal);
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .innov-item-desc {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.4;
+    }
+
+    /* Slide 7 (Monetization) */
+    .biz-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+    }
+
+    .biz-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.02);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .biz-card-header {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-teal);
+      margin-bottom: 12px;
+      border-bottom: 2px solid var(--sage-light);
+      padding-bottom: 8px;
+    }
+
+    .biz-card-tag {
+      font-size: 11px;
+      font-weight: 700;
+      background-color: var(--sage-light);
+      color: var(--primary-teal);
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      align-self: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .biz-card-price {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent-amber);
+      margin-bottom: 16px;
+    }
+
+    .biz-bullets {
+      list-style-type: none;
+      font-size: 14px;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    .biz-bullets li {
+      margin-bottom: 10px;
+      padding-left: 15px;
+      position: relative;
+    }
+
+    .biz-bullets li::before {
+      content: "✓";
+      color: var(--sage-green);
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+
+    /* Slide 8 (Close) */
+    .close-layout {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 50px;
+      align-items: center;
+    }
+
+    .close-left {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .close-text {
+      font-size: 22px;
+      line-height: 1.6;
+      color: var(--text-dark);
+      border-left: 4px solid var(--primary-teal);
+      padding-left: 20px;
+    }
+
+    .cta-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+    }
+
+    .cta-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary-teal);
+      margin-bottom: 20px;
+    }
+
+    .cta-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      color: var(--secondary-teal-light);
+      text-decoration: none;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .cta-link:hover {
+      text-decoration: underline;
+    }
+
+    .cta-icon {
+      font-size: 20px;
+    }
+
+    /* Playback / Progress Indicator Bar */
+    .progress-bar-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background-color: var(--border-color);
+      z-index: 101;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background-color: var(--primary-teal);
+      transition: width linear;
+    }
+
+    /* Navigation Arrows for manual debug */
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background-color: rgba(255,255,255,0.8);
+      border: 1px solid var(--border-color);
+      color: var(--primary-teal);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 102;
+      font-size: 20px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      background-color: var(--primary-teal);
+      color: white;
+    }
+
+    .nav-prev { left: 16px; }
+    .nav-next { right: 16px; }
+  </style>
+</head>
+<body>
+
+  <div class="deck-container">
+    <!-- Top Progress Bar -->
+    <div class="progress-bar-container">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="nav-btn nav-prev" onclick="prevSlide()">&#10094;</div>
+    <div class="nav-btn nav-next" onclick="nextSlide()">&#10095;</div>
+
+    <!-- Slides Wrapper -->
+    <div class="slides-wrapper">
+
+      <!-- SLIDE 1 -->
+      <div class="slide active" id="slide-1" data-duration="10" data-subtitle="KinKeep 是专为‘你无法亲自拨出那通电话的日子’而设计的家庭健康伴侣。让 AI 承担日常检测，让家属保留核心决策。">
+        <div class="cover-layout">
+          <div class="brand-title">KinKeep</div>
+          <div class="brand-tagline">For the day you cannot make the call.</div>
+          <div class="brand-desc">
+            A family health companion that notices meaningful changes against personal baselines, checks in with your parent, and tells you only when you are needed.
+          </div>
+          <div class="cover-meta">
+            <div class="meta-item">
+              <span style="color:var(--primary-teal)">●</span> <strong>Event:</strong> OpenAI Build Week 2026
+            </div>
+            <div class="meta-item">
+              <span style="color:var(--sage-green)">●</span> <strong>Builder:</strong> Elena Xiao (Solo Builder + Coding Agents)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2 -->
+      <div class="slide" id="slide-2" data-duration="15" data-subtitle="智能设备只会分享数据，但数据不是照护。没有哪个仪表盘会先问妈妈感觉如何，也没有哪个数字会告诉女儿：今天是否真的需要她？">
+        <div class="slide-header">
+          <span class="slide-tag">The Pain Point</span>
+          <h2 class="slide-title">Wearables share numbers. Families still do the care work.</h2>
+        </div>
+        <div class="slide-body">
+          <div class="pain-grid">
+            <div class="pain-card left">
+              <div class="card-title-lg">
+                <span class="watch-icon">⌚</span> Raw Wearable Data
+              </div>
+              <ul class="pain-list">
+                <li>Sleep duration is 2 hours less than usual</li>
+                <li>Morning step count is down by 87%</li>
+                <li>Vitals details are scattered in complex charts</li>
+              </ul>
+            </div>
+            <div class="pain-card right">
+              <div class="card-title-lg">
+                <span class="watch-icon">❤️</span> The Caregiver Burden
+              </div>
+              <ul class="pain-list pain-right-bullets">
+                <li>No dashboard asks how Mum's knee actually feels</li>
+                <li>No automated alert completes the first wellness check</li>
+                <li>Caregivers face constant worry and check-in fatigue</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3 -->
+      <div class="slide" id="slide-3" data-duration="15" data-subtitle="KinKeep 填补了这一空白：当设备检测到老人的异常偏离时，系统温和问候老人，提炼出关键信息，只在人类决策边界打扰家属。">
+        <div class="slide-header">
+          <span class="slide-tag">How It Works</span>
+          <h2 class="slide-title">KinKeep closes the care loop—with human gates.</h2>
+        </div>
+        <div class="slide-body" style="align-items: center;">
+          <div class="loop-flow">
+            <div class="loop-step">
+              <div class="step-num">1</div>
+              <div class="step-title">Notice Change</div>
+              <div class="step-desc">Passive signals check against her personal historical baseline.</div>
+            </div>
+            <div class="loop-step">
+              <div class="step-num">2</div>
+              <div class="step-title">Check In First</div>
+              <div class="step-desc">A friendly, structured conversation starts in her preferred language.</div>
+            </div>
+            <div class="loop-step">
+              <div class="step-num">3</div>
+              <div class="step-title">Routine Care</div>
+              <div class="step-desc">KinKeep asks structured questions, records answers, and prepares the next step.</div>
+            </div>
+            <div class="loop-step">
+              <div class="step-num">4</div>
+              <div class="step-title">One Decision</div>
+              <div class="step-desc">The family is interrupted only to approve high-impact care steps.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4 -->
+      <div class="slide" id="slide-4" data-duration="35" data-subtitle="双端无缝连接：老人端通过极简双语对话完成问候；在取得老人同意后，家属端看到个人基线证据、不确定项和需要人工批准的照护选项。">
+        <div class="slide-header">
+          <span class="slide-tag">Product Demo</span>
+          <h2 class="slide-title">Two Surfaces, One Care Event</h2>
+        </div>
+        <div class="slide-body">
+          <div class="mockup-container">
+            <!-- Parent Phone -->
+            <div class="mock-phone">
+              <div class="phone-bar"><div class="phone-notch"></div></div>
+              <div class="phone-screen">
+                <div class="screen-header">
+                  <span>👵 Mum's Companion</span>
+                  <span style="color:var(--sage-green)">● Connected</span>
+                </div>
+
+                <div class="chat-area" id="parentChat">
+                  <div class="watch-card">
+                    <span class="watch-icon">⌚</span>
+                    <div class="watch-details">
+                      <strong>Watch Synced (08:30)</strong>
+                      <span style="font-size: 10px; color:#666;">Sleep -1h · Steps low · HR +8%</span>
+                    </div>
+                  </div>
+                  <!-- Dynamic chat bubbles go here -->
+                </div>
+
+                <div class="chat-choices" id="parentChoices">
+                  <!-- Dynamic choices go here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Family Portal -->
+            <div class="mock-family-screen">
+              <div class="family-header">
+                <span>👨‍👩‍👧 Family Portal</span>
+                <span style="font-size:12px;">Elena Xiao (Daughter)</span>
+              </div>
+              <div class="family-body" id="familyDashboard">
+                <div class="status-normal" id="familyNormalStatus">
+                  <div class="status-title">
+                    <span class="status-green-dot"></span>Mum is doing okay
+                  </div>
+                  <span style="color:#666; font-size:12px;">All passive wearable signals are within her normal weekly baseline ranges. No action required.</span>
+                </div>
+
+                <!-- Alert Banner (hidden initially) -->
+                <div class="alert-banner" id="familyAlertBanner">
+                  <div class="alert-header">
+                    <span style="color:var(--alert-red)">⚠️</span> Attention Needed: Mum (Elena)
+                  </div>
+                  <div style="font-weight: 600; font-size: 13px; margin-bottom: 6px;" id="alertSummaryText">
+                    Knee pain reported for 3 days
+                  </div>
+                  <ul class="alert-bullets">
+                    <li>• Sleep quality down 15% vs usual</li>
+                    <li>• Activity down 87% (320 steps today)</li>
+                    <li>• Confirmed: "knee is hurting a bit" via companion</li>
+                  </ul>
+
+                  <div class="approval-box" id="familyApprovalBox">
+                    <div style="font-weight:700; font-size:11px; color:var(--primary-teal);">PROPOSED RESOLUTION</div>
+                    <div style="font-size:11px; color:#444; margin-bottom:6px;">Recommend teleconsultation with Dr. Lee today?</div>
+                    <div class="approval-btn-group">
+                      <button class="approve-btn" id="btnApprove" onclick="approveAction()">Approve Suggestion</button>
+                      <button class="decline-btn" id="btnDecline" onclick="declineAction()">Decline</button>
+                    </div>
+                  </div>
+
+                  <div class="audit-trail" id="familyAuditTrail">
+                    <div style="font-weight:700; margin-bottom:4px; font-size:10px;">AUDIT LOG & SOVEREIGNTY GATES</div>
+                    <div class="audit-entry">
+                      <span>✓ Mum consented to share knee note</span>
+                      <span style="color:#888;">08:32</span>
+                    </div>
+                    <div class="audit-entry" id="daughterAuditEntry" style="display:none;">
+                      <span style="color:var(--accent-amber); font-weight:600;">✓ Daughter Elena approved teleconsultation</span>
+                      <span style="color:#888;">08:33</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5 -->
+      <div class="slide" id="slide-5" data-duration="15" data-subtitle="KinKeep 的核心原则：主权属于人类。AI 协助转写与对话，但通知家属、医疗升级等高风险操作，完全由确定性规则控制并暂停等待人类批准。">
+        <div class="slide-header">
+          <span class="slide-tag">Sovereignty Boundaries</span>
+          <h2 class="slide-title">The Agent Stops and Asks</h2>
+        </div>
+        <div class="slide-body">
+          <div class="sov-layout">
+            <div class="sov-left">
+              <table class="sov-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50%;">Routine Tasks Agents May Execute</th>
+                    <th style="width: 50%;">Consequential Actions Humans Control</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <span class="badge-agent">Agent</span>
+                      <p style="margin-top:8px; font-size:14px; color:#444;">Read wearable metrics, detect baseline deviation, check in on parent symptoms, draft summaries.</p>
+                    </td>
+                    <td>
+                      <span class="badge-human">Human Gate</span>
+                      <p style="margin-top:8px; font-size:14px; color:#444;">Choosing a family contact, sharing check-in details, approving a care plan, and deciding whether emergency help is needed.</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="margin-top: 20px; font-size: 14px; color: #666; font-style: italic;">
+                *Deterministic rules govern the gates. Generative models only compose tone and translations.
+              </div>
+            </div>
+            <div class="sov-right">
+              <div class="sov-quote">"Most agent demos compete on how far autonomy can go. In family care, trust comes from proving exactly where autonomy stops."</div>
+              <div class="sov-quote-author">— KinKeep Design Principle</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6 -->
+      <div class="slide" id="slide-6" data-duration="15" data-subtitle="OpenAI Build Week 期间，我用 Codex 完成了照护闭环、双端共享状态、基于同意的家属联系和更完整的验证。Codex 加速实现，我保留产品与安全判断。">
+        <div class="slide-header">
+          <span class="slide-tag">OpenAI Build Week Contribution</span>
+          <h2 class="slide-title">Built with Codex. Governed by Human Judgment.</h2>
+        </div>
+        <div class="slide-body">
+          <div class="innov-layout">
+            <div>
+              <ul class="innov-list">
+                <li class="innov-item">
+                  <div class="innov-item-title">A complete Care Episode Loop</div>
+                  <div class="innov-item-desc">Turns a personal-baseline change into a check-in, one family decision, accountable tasks, and a recorded follow-up.</div>
+                </li>
+                <li class="innov-item">
+                  <div class="innov-item-title">Consent and human gates as architecture</div>
+                  <div class="innov-item-desc">Typed deterministic rules control contact, sharing, approvals, escalation, owners, and deadlines; models cannot bypass them.</div>
+                </li>
+                <li class="innov-item">
+                  <div class="innov-item-title">GPT-5.6 and voice under clear boundaries</div>
+                  <div class="innov-item-desc">Supports bilingual replies, voice transcription, and structured meal-photo understanding while keys remain server-side.</div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="timeline-container">
+              <div class="timeline-title">✓ Verifiable Build Week delivery</div>
+              <div class="timeline">
+                <div class="timeline-event">
+                  <span class="time-badge">Loop</span>
+                  <span class="event-title">Care episode from signal to follow-up</span>
+                </div>
+                <div class="timeline-event">
+                  <span class="time-badge">State</span>
+                  <span class="event-title">Shared parent-and-family episode state</span>
+                </div>
+                <div class="timeline-event">
+                  <span class="time-badge">Consent</span>
+                  <span class="event-title">User-selected WhatsApp family handoff</span>
+                </div>
+                <div class="timeline-event">
+                  <span class="time-badge">Voice</span>
+                  <span class="event-title">Production transcription and read-aloud guidance</span>
+                </div>
+                <div class="timeline-event">
+                  <span class="time-badge">QA</span>
+                  <span class="event-title">Clean build, deployment, and 12 passing tests</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7 -->
+      <div class="slide" id="slide-7" data-duration="15" data-subtitle="商业模式：以跨境照护订阅服务（S$29/月）为切入点，未来拓展至保险/电信巨头分发合作，以及面向专业护理团队的 SaaS 控制台。">
+        <div class="slide-header">
+          <span class="slide-tag">Future Plans</span>
+          <h2 class="slide-title">Monetization: Build Trust, Validate Willingness to Pay</h2>
+        </div>
+        <div class="slide-body">
+          <div class="biz-grid">
+            <div class="biz-card">
+              <div class="biz-card-tag">Phase 1: B2C Wedge</div>
+              <div class="biz-card-header">Family Reassurance Tier</div>
+              <div class="biz-card-price">S$29 <span style="font-size:12px; font-weight:normal; color:#666;">/ elder / month</span></div>
+              <ul class="biz-bullets">
+                <li>Target: Cross-border families</li>
+                <li>Proactive check-ins</li>
+                <li>Escalation chain logs</li>
+                <li>Weekly summary digests</li>
+              </ul>
+            </div>
+
+            <div class="biz-card">
+              <div class="biz-card-tag">Phase 2: B2B2C Channels</div>
+              <div class="biz-card-header">Distribution Partners</div>
+              <div class="biz-card-price">Partnerships</div>
+              <ul class="biz-bullets">
+                <li>Insurers: Healthy longevity rewards</li>
+                <li>Telcos: Family plan bundles</li>
+                <li>Employers: Caregiving employee benefits</li>
+              </ul>
+            </div>
+
+            <div class="biz-card">
+              <div class="biz-card-tag">Phase 3: B2B SaaS</div>
+              <div class="biz-card-header">Care Provider Console</div>
+              <div class="biz-card-price">Enterprise SaaS</div>
+              <ul class="biz-bullets">
+                <li>Independent care networks</li>
+                <li>Agents complete first-round check-ins</li>
+                <li>Professionals manage high caseloads (1:50+)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8 -->
+      <div class="slide" id="slide-8" data-duration="15" data-subtitle="KinKeep，为每一个家庭‘照护管理者’提供专属的 AI 照护助手。AI 负责检测，人类保留判断。演示及代码已公开部署。">
+        <div class="slide-header">
+          <span class="slide-tag">Closing</span>
+          <h2 class="slide-title">KinKeep: Empowering the Family Kinkeeper</h2>
+        </div>
+        <div class="slide-body">
+          <div class="close-layout">
+            <div class="close-left">
+              <div class="close-text">
+                "We do not promise autonomous diagnoses. We promise that you will know when you are needed, and you will stay in control."
+              </div>
+              <div style="font-size:16px; font-weight:700; color:var(--primary-teal);">
+                The Agent does the checking. The Human keeps the judgment.
+              </div>
+            </div>
+
+            <div class="cta-container">
+              <div class="cta-title">Try it & Review the Code</div>
+              <a href="https://kinkeep-family-health.leini9591.chatgpt.site/" target="_blank" class="cta-link">
+                <span class="cta-icon">▶</span> Live Demo URL
+              </a>
+              <a href="https://github.com/leini8891/KinKeep" target="_blank" class="cta-link">
+                <span class="cta-icon">📦</span> GitHub Repository
+              </a>
+              <div style="font-size:13px; color:#666; margin-top:20px; border-top: 1px solid var(--border-color); padding-top:15px;">
+                Contact: <strong>leini8891@gmail.com</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Subtitle Bar -->
+    <div class="subtitle-bar">
+      <div id="subtitleText" class="subtitle-text"></div>
+    </div>
+  </div>
+
+  <script>
+    // Slider Logic
+    const slides = document.querySelectorAll('.slide');
+    const subtitleText = document.getElementById('subtitleText');
+    const progressBar = document.getElementById('progressBar');
+    let currentIdx = 0;
+    let timer = null;
+    let progressTimer = null;
+    let progressVal = 0;
+
+    // Show a specific slide and run its internal logic
+    function showSlide(idx) {
+      // Clear timers
+      if (timer) clearTimeout(timer);
+      if (progressTimer) clearInterval(progressTimer);
+
+      slides.forEach(slide => slide.classList.remove('active'));
+
+      currentIdx = idx;
+      if (currentIdx >= slides.length) {
+        currentIdx = 0; // Loop back
+      } else if (currentIdx < 0) {
+        currentIdx = slides.length - 1;
+      }
+
+      const activeSlide = slides[currentIdx];
+      activeSlide.classList.add('active');
+
+      // Update Subtitles
+      const sub = activeSlide.getAttribute('data-subtitle');
+      subtitleText.textContent = sub;
+
+      // Handle custom logic for Slide 4 (Interactive Mockup Animation)
+      if (activeSlide.id === 'slide-4') {
+        startMockupAnimation();
+      } else {
+        resetMockupAnimation();
+      }
+
+      // Duration & progress bar
+      const duration = parseInt(activeSlide.getAttribute('data-duration')) * 1000;
+
+      // Reset progress bar
+      progressBar.style.transition = 'none';
+      progressBar.style.width = '0%';
+
+      // Force repaint
+      progressBar.offsetHeight;
+
+      // Start transition animation
+      progressBar.style.transition = `width ${duration}ms linear`;
+      progressBar.style.width = '100%';
+
+      // Set timeout for next slide
+      timer = setTimeout(() => {
+        nextSlide();
+      }, duration);
+    }
+
+    function nextSlide() {
+      showSlide(currentIdx + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentIdx - 1);
+    }
+
+    // Slide 4 Mockup Animation Logic
+    let mockupTimer1, mockupTimer2, mockupTimer3, mockupTimer4, mockupTimer5;
+    const parentChat = document.getElementById('parentChat');
+    const parentChoices = document.getElementById('parentChoices');
+    const familyNormalStatus = document.getElementById('familyNormalStatus');
+    const familyAlertBanner = document.getElementById('familyAlertBanner');
+    const familyAuditTrail = document.getElementById('familyAuditTrail');
+    const daughterAuditEntry = document.getElementById('daughterAuditEntry');
+    const btnApprove = document.getElementById('btnApprove');
+    const familyApprovalBox = document.getElementById('familyApprovalBox');
+
+    function resetMockupAnimation() {
+      clearTimeout(mockupTimer1);
+      clearTimeout(mockupTimer2);
+      clearTimeout(mockupTimer3);
+      clearTimeout(mockupTimer4);
+      clearTimeout(mockupTimer5);
+
+      // Reset parent chat
+      parentChat.innerHTML = `
+        <div class="watch-card">
+          <span class="watch-icon">⌚</span>
+          <div class="watch-details">
+            <strong>Watch Synced (08:30)</strong>
+            <span style="font-size: 10px; color:#666;">Sleep -1h · Steps low · HR +8%</span>
+          </div>
+        </div>
+      `;
+      parentChoices.innerHTML = '';
+
+      // Reset family dashboard
+      familyNormalStatus.style.display = 'flex';
+      familyAlertBanner.style.display = 'none';
+      familyAuditTrail.style.display = 'none';
+      daughterAuditEntry.style.display = 'none';
+      familyApprovalBox.style.display = 'flex';
+      btnApprove.disabled = false;
+      btnApprove.textContent = "Approve Suggestion";
+    }
+
+    function startMockupAnimation() {
+      resetMockupAnimation();
+
+      // Step 1 (2s): Bot sends check-in query
+      mockupTimer1 = setTimeout(() => {
+        appendBotBubble("Hi Elena. I noticed you slept less and walked less. How are you feeling today?");
+
+        // Show options
+        mockupTimer2 = setTimeout(() => {
+          showChoices(["I feel fine", "My knee is hurting"], (choice) => {
+            if (choice === "My knee is hurting") {
+              selectKneePain();
+            }
+          });
+
+          // Auto select "My knee is hurting" after 3 seconds for recorded video demo
+          mockupTimer3 = setTimeout(() => {
+            const btn = parentChoices.querySelector('.choice-btn:nth-child(2)');
+            if (btn && !btn.classList.contains('selected')) {
+              btn.click();
+            }
+          }, 3000);
+
+        }, 1500);
+
+      }, 1000);
+    }
+
+    function appendBotBubble(text) {
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble bubble-bot';
+      bubble.textContent = text;
+      parentChat.appendChild(bubble);
+      parentChat.scrollTop = parentChat.scrollHeight;
+    }
+
+    function appendUserBubble(text) {
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble bubble-user';
+      bubble.textContent = text;
+      parentChat.appendChild(bubble);
+      parentChat.scrollTop = parentChat.scrollHeight;
+    }
+
+    function showChoices(options, callback) {
+      parentChoices.innerHTML = '';
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          document.querySelectorAll('.choice-btn').forEach(b => b.classList.add('selected'));
+          btn.className = 'choice-btn selected';
+          callback(opt);
+        };
+        parentChoices.appendChild(btn);
+      });
+    }
+
+    function selectKneePain() {
+      appendUserBubble("My knee is hurting");
+      parentChoices.innerHTML = '';
+
+      // Bot asks how long
+      setTimeout(() => {
+        appendBotBubble("I am sorry to hear that. Has it been hurting for multiple days?");
+
+        setTimeout(() => {
+          showChoices(["No, just today", "Yes, for 3 days"], (choice) => {
+            if (choice === "Yes, for 3 days") {
+              selectThreeDays();
+            }
+          });
+
+          // Auto select "Yes, for 3 days"
+          setTimeout(() => {
+            const btn = parentChoices.querySelector('.choice-btn:nth-child(2)');
+            if (btn && !btn.classList.contains('selected')) {
+              btn.click();
+            }
+          }, 3000);
+
+        }, 1500);
+      }, 1500);
+    }
+
+    function selectThreeDays() {
+      appendUserBubble("Yes, for 3 days");
+      parentChoices.innerHTML = '';
+
+      // Bot asks permission to alert family
+      setTimeout(() => {
+        appendBotBubble("Shall I ask your daughter Elena to call you today?");
+
+        setTimeout(() => {
+          showChoices(["No, I'm okay", "Yes, please"], (choice) => {
+            if (choice === "Yes, please") {
+              consentAlert();
+            }
+          });
+
+          // Auto select "Yes, please"
+          setTimeout(() => {
+            const btn = parentChoices.querySelector('.choice-btn:nth-child(2)');
+            if (btn && !btn.classList.contains('selected')) {
+              btn.click();
+            }
+          }, 3000);
+
+        }, 1500);
+      }, 1500);
+    }
+
+    function consentAlert() {
+      appendUserBubble("Yes, please");
+      parentChoices.innerHTML = '';
+
+      setTimeout(() => {
+        appendBotBubble("I have prepared the note. Elena will be notified shortly.");
+
+        // Trigger Family Dashboard transition
+        triggerFamilyAlert();
+      }, 1500);
+    }
+
+    // Trigger Family Dashboard transition
+    function triggerFamilyAlert() {
+      familyNormalStatus.style.display = 'none';
+      familyAlertBanner.style.display = 'block';
+      familyAuditTrail.style.display = 'block';
+
+      // Auto approve teleconsultation after 5 seconds
+      mockupTimer4 = setTimeout(() => {
+        btnApprove.click();
+      }, 5000);
+    }
+
+    function approveAction() {
+      // Transition family UI
+      familyApprovalBox.style.display = 'none';
+      daughterAuditEntry.style.display = 'flex';
+
+      const summaryText = document.getElementById('alertSummaryText');
+      summaryText.innerHTML = 'Knee pain reported — <span style="color:var(--sage-green);">✓ Telehealth Scheduled</span>';
+    }
+
+    function declineAction() {
+      familyApprovalBox.innerHTML = '<div style="color:#666; font-size:11px; padding:6px; font-weight:600;">Resolution Declined. Checked in via call.</div>';
+    }
+
+    // Start Slideshow
+    window.onload = () => {
+      showSlide(0);
+    };
+  </script>
+</body>
+</html>
