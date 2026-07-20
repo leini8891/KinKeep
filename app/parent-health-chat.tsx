@@ -867,7 +867,8 @@ export function ParentHealthChat() {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") sendDraft();
+    // IME composition (e.g. pinyin) uses Enter to commit text, not to send.
+    if (event.key === "Enter" && !event.nativeEvent.isComposing) sendDraft();
   };
 
   const handlePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
