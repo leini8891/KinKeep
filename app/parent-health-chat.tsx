@@ -868,6 +868,7 @@ export function ParentHealthChat() {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    // IME composition (for example, pinyin) uses Enter to confirm text, not send it.
     if (shouldSubmitOnEnter({
       key: event.key,
       isComposing: event.nativeEvent.isComposing,
