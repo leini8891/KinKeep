@@ -27,6 +27,7 @@ import { CareEscalationCard } from "./care-escalation-card";
 import { createCareEpisode, saveCareEpisode } from "./care-episode";
 import { morningHealthFixture } from "./demo-health-data";
 import { FollowUpConfirmationCard } from "./follow-up-confirmation-card";
+import { shouldSubmitOnEnter } from "./keyboard-input";
 import {
   ESCALATION_EVENT,
   careWhatsAppHref,
@@ -867,8 +868,12 @@ export function ParentHealthChat() {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    // IME composition (e.g. pinyin) uses Enter to commit text, not to send.
-    if (event.key === "Enter" && !event.nativeEvent.isComposing) sendDraft();
+    // IME composition (for example, pinyin) uses Enter to confirm text, not send it.
+    if (shouldSubmitOnEnter({
+      key: event.key,
+      isComposing: event.nativeEvent.isComposing,
+      keyCode: event.nativeEvent.keyCode,
+    })) sendDraft();
   };
 
   const handlePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
