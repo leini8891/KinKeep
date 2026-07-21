@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
+import { shouldSubmitOnEnter } from "../app/keyboard-input.ts";
+
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
@@ -15,6 +17,11 @@ async function render(pathname = "/") {
 }
 
 test("server-renders the KinKeep parent companion", async () => {
+  assert.equal(shouldSubmitOnEnter({ key: "Enter" }), true);
+  assert.equal(shouldSubmitOnEnter({ key: "Enter", isComposing: true }), false);
+  assert.equal(shouldSubmitOnEnter({ key: "Enter", keyCode: 229 }), false);
+  assert.equal(shouldSubmitOnEnter({ key: "Escape" }), false);
+
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -40,6 +47,7 @@ test("server-renders the KinKeep parent companion", async () => {
   const parentBundleName = assetNames.find((name) => name.startsWith("parent-health-chat-") && name.endsWith(".js"));
   assert.ok(parentBundleName, "parent client bundle should be emitted");
   const parentBundle = await readFile(new URL(`../dist/client/assets/${parentBundleName}`, import.meta.url), "utf8");
+  assert.match(parentBundle, /isComposing/);
   assert.match(parentBundle, /没有这些情况/);
   assert.match(parentBundle, /None of those/);
   assert.match(parentBundle, /陪伴助手正在分析您的健康数据/);
